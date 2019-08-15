@@ -1,8 +1,39 @@
-import * as functions from 'firebase-functions';
+// // Command to deploy: firebase deploy --only functions
 
-// // Start writing Firebase Functions
-// // https://firebase.google.com/docs/functions/typescript
-//
-// export const helloWorld = functions.https.onRequest((request, response) => {
-//  response.send("Hello from Firebase!");
+// import * as functions from 'firebase-functions';
+// import admin from 'firebase-admin';
+
+// // import addKeyToAllTasks from './migrations/addKeyToAllTasks';
+// // import renameKeyInAllTasks from './migrations/renameKeyInAllTasks';
+// // import deleteKeyForAllTasks from './migrations/deleteKeyForAllTasks';
+// // import transformValueForAllTasks from './migrations/transformValueForAllTasks';
+
+// admin.initializeApp(functions.config().firebase);
+
+// export const migrate = functions.https.onRequest(async (request, response) => {
+//   // const db = admin.firestore();
+
+//   // await addKeyToAllTasks(db, 'prioritizedAheadOf', null);
+
+//   // await deleteKeyForAllTasks(db, 'blockers');
+
+//   // await renameKeyInAllTasks(db, 'thrased', 'trashed', null);
+
+//   // await transformValueForAllTasks(db, 'blockedBy', (oldValue) => {
+//   //   if (!oldValue || !oldValue.length) {
+//   //     return [];
+//   //   }
+//   //   return oldValue.map((blockedById: string|object) => (
+//   //     typeof blockedById === 'object'
+//   //       ? blockedById
+//   //       : {
+//   //         type: 'task',
+//   //         config: {
+//   //           taskId: blockedById,
+//   //         },
+//   //       }
+//   //   ))
+//   // });
+
+//   response.send("Done!");
 // });
