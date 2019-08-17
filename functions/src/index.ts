@@ -3,7 +3,7 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
-import slackApp from './slackApp';
+import slackApp from './slack/app';
 
 // import addKeyToAllTasks from './migrations/addKeyToAllTasks';
 // import renameKeyInAllTasks from './migrations/renameKeyInAllTasks';
