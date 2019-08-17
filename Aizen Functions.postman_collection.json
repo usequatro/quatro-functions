@@ -6,33 +6,7 @@
 	},
 	"item": [
 		{
-			"name": "slack/:id",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "https://us-central1-tasket-project.cloudfunctions.net/slack/task/hR8DH7aNZtEcCx9uY2Xz",
-					"protocol": "https",
-					"host": [
-						"us-central1-tasket-project",
-						"cloudfunctions",
-						"net"
-					],
-					"path": [
-						"slack",
-						"task",
-						"hR8DH7aNZtEcCx9uY2Xz"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "slack/create",
+			"name": "slack - create task",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -45,10 +19,10 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"command\": \"new\",\n  \"text\": \"\\\"Slack integration created task\\\" 5 2\",\n  \"userId\": \"a1b2c3d4e5\",\n  \"user_name\": \"penny.smith\",\n  \"response_url\": \"example.com\"\n}"
+					"raw": "{\n  \"command\": \"aizen\",\n  \"text\": \"\\\"Slack integration v2 created task\\\" 6 2\",\n  \"userId\": \"a1b2c3d4e5\",\n  \"user_name\": \"penny.smith\",\n  \"response_url\": \"example.com\"\n}"
 				},
 				"url": {
-					"raw": "https://us-central1-tasket-project.cloudfunctions.net/slack/task",
+					"raw": "https://us-central1-tasket-project.cloudfunctions.net/slack",
 					"protocol": "https",
 					"host": [
 						"us-central1-tasket-project",
@@ -56,8 +30,69 @@
 						"net"
 					],
 					"path": [
-						"slack",
-						"task"
+						"slack"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "slack - signin",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"command\": \"aizen\",\n  \"text\": \"signin <mailto:gpuenteallott+test1@gmail.com|gpuenteallott+test1@gmail.com>\",\n  \"user_id\": \"a1b2c3d4e5\",\n  \"user_name\": \"penny.smith\",\n  \"response_url\": \"example.com\"\n}"
+				},
+				"url": {
+					"raw": "https://us-central1-tasket-project.cloudfunctions.net/slack",
+					"protocol": "https",
+					"host": [
+						"us-central1-tasket-project",
+						"cloudfunctions",
+						"net"
+					],
+					"path": [
+						"slack"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "slack - signout",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"command\": \"aizen\",\n  \"text\": \"signout\",\n  \"user_id\": \"a1b2c3d4e5\",\n  \"user_name\": \"penny.smith\",\n  \"response_url\": \"example.com\"\n}"
+				},
+				"url": {
+					"raw": "https://us-central1-tasket-project.cloudfunctions.net/slack",
+					"protocol": "https",
+					"host": [
+						"us-central1-tasket-project",
+						"cloudfunctions",
+						"net"
+					],
+					"path": [
+						"slack"
 					]
 				}
 			},
