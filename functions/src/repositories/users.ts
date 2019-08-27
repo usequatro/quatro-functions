@@ -3,12 +3,12 @@ import admin from 'firebase-admin';
 const USERS = 'users';
 
 interface User {
-  slackUserId?: string,
+  uid: string,
 };
 
 export const findByEmail = async (email: string) : Promise<[string, User]> => {
   const userRecord = await admin.auth().getUserByEmail(email);
-  return [userRecord.uid, userRecord.toJSON()];
+  return [userRecord.uid, <User> userRecord.toJSON()];
 };
 
 export const findBySlackUserId = async (slackUserId: string) : Promise<[string, User]> => {

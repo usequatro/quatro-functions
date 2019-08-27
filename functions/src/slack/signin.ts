@@ -44,7 +44,7 @@ export const signin = async (req: Request, res: Response) => {
       }
     } catch (error) {}
 
-    const [userId] = await findByEmail(aizenEmailAddress);
+    const [userId,] = await findByEmail(aizenEmailAddress);
     await setSlackUserId(userId, slackUserId);
 
     console.log(`[POST slack/signin] Success. userId=${userId} slackUserId=${slackUserId}`);
