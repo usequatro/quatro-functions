@@ -1,24 +1,8 @@
 import admin from 'firebase-admin';
 import HttpError from '../HttpError';
+import { Task } from '../types';
 
 const TASKS = 'tasks'; // collection name
-
-interface MinimalTask {
-  title: string,
-  effort: number,
-  impact: number,
-}
-
-interface Task extends MinimalTask{
-  blockedBy?: Array<string>,
-  completed?: number | null,
-  created?: number | null,
-  description?: string | null,
-  due?: number | null,
-  scheduledStart?: number | null,
-  trashed?: number | null,
-  userId?: string,
-};
 
 const KEY_DEFAULTS = {
   blockedBy: [],
@@ -47,7 +31,21 @@ export const findbyId = async (id: string) : Promise<Task> => {
   throw new HttpError(404, 'Task not found');
 };
 
-export const create = async (userId: string, task: MinimalTask) : Promise<[string, object?]> => {
+export const findLastByRecurringConfigId = async (recurringConfigId: string) : Promise<[string, Task]|[null, null]> => {
+  const db = admin.firestore();
+
+  const query = db.collection(TASKS)
+    .where('recurringConfigId', '==', recurringConfigId)
+    .orderBy('created')
+    .limit(1);
+  const querySnapshot = await query.get();
+
+  return querySnapshot.docs.length > 0
+    ? [querySnapshot.docs[0].id, <Task> querySnapshot.docs[0].data()]
+    : [null, null];
+};
+
+export const create = async (userId: string, task: Task) : Promise<[string, object?]> => {
   if (task.impact < 1 || task.impact > 7) {
     throw new HttpError(400, 'Impact must be between 1 and 7');
   }

@@ -4,6 +4,7 @@ import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
 import slackApp from './slack/app';
+import createRecurringTasks from './cron/createRecurringTasks';
 
 // import addKeyToAllTasks from './migrations/addKeyToAllTasks';
 // import renameKeyInAllTasks from './migrations/renameKeyInAllTasks';
@@ -13,6 +14,18 @@ import slackApp from './slack/app';
 admin.initializeApp(functions.config().firebase);
 
 export const slack = functions.https.onRequest(slackApp);
+
+// This will be run every day at 00:00 AM Eastern!
+// functions.pubsub.schedule('0 0 * * *').timeZone('America/New_York').onRun((context) => {
+//   createRecurringTasks();
+//   return null;
+// });
+
+// temp
+export const recurring = functions.https.onRequest(async (req: functions.Request, res: functions.Response) => {
+  await createRecurringTasks();
+  res.send('all good');
+});
 
 // export const migrate = functions.https.onRequest(async (request, response) => {
   // const db = admin.firestore();

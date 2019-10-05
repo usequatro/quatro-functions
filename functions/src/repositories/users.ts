@@ -1,10 +1,7 @@
 import admin from 'firebase-admin';
+import { User } from '../types';
 
 const USERS = 'users';
-
-interface User {
-  uid: string,
-};
 
 export const findByEmail = async (email: string) : Promise<[string, User]> => {
   const userRecord = await admin.auth().getUserByEmail(email);
