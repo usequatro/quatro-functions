@@ -15,13 +15,15 @@ admin.initializeApp(functions.config().firebase);
 
 export const slack = functions.https.onRequest(slackApp);
 
-// This will be run every day at 00:00 AM Eastern!
-// functions.pubsub.schedule('0 0 * * *').timeZone('America/New_York').onRun((context) => {
-//   createRecurringTasks();
-//   return null;
-// });
+export const scheduledCreateRecurringTasks = functions.pubsub
+  .schedule('1 0 * * *') // This will be run every day at 00:01 AM Eastern
+  .timeZone('America/New_York')
+  .onRun(async (context) => {
+    await createRecurringTasks();
+    return null;
+  });
 
-// temp
+// temporary, to test calling the funcionality directly
 export const recurring = functions.https.onRequest(async (req: functions.Request, res: functions.Response) => {
   const dayOffset = parseInt(req.query.offset || 0, 10);
   await createRecurringTasks(dayOffset);
