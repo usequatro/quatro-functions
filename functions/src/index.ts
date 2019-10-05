@@ -23,8 +23,9 @@ export const slack = functions.https.onRequest(slackApp);
 
 // temp
 export const recurring = functions.https.onRequest(async (req: functions.Request, res: functions.Response) => {
-  await createRecurringTasks();
-  res.send('all good');
+  const dayOffset = parseInt(req.query.offset || 0, 10);
+  await createRecurringTasks(dayOffset);
+  res.status(200).send('Recurring tasks handled');
 });
 
 // export const migrate = functions.https.onRequest(async (request, response) => {

@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import HttpError from '../HttpError';
-import { RecurringConfig } from '../types';
+import { RecurringConfig, OptionalKeys } from '../types';
 
 const RECURRING_CONFIGS = 'recurringConfigs'; // collection name
 
@@ -16,10 +16,9 @@ export const findAll = async () : Promise<[string, RecurringConfig][]> => {
   ]));
 
   return recurringConfigs;
-
 };
 
-export const findbyId = async (id: string) : Promise<RecurringConfig> => {
+export const findById = async (id: string) : Promise<RecurringConfig> => {
   const db = admin.firestore();
 
   const docRef = db.collection(RECURRING_CONFIGS).doc(id);
@@ -43,4 +42,11 @@ export const create = async (userId: string, entity: RecurringConfig) : Promise<
   const docRef = await db.collection(RECURRING_CONFIGS).add(finalEntity);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data()];
+};
+
+export const update = async (rcId: string, updates: OptionalKeys<RecurringConfig>) => {
+  const db = admin.firestore();
+
+  const docRef = await db.collection(RECURRING_CONFIGS).doc(rcId);
+  return docRef.set(updates, { merge: true });
 };

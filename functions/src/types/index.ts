@@ -1,18 +1,20 @@
 
+type ActiveWeekdays = {
+  mon: boolean,
+  tue: boolean,
+  wed: boolean,
+  thu: boolean,
+  fri: boolean,
+  sat: boolean,
+  sun: boolean,
+};
+
 export type RecurringConfig = {
   userId: string,
   unit: 'day' | 'week' | 'month' | 'year',
   amount: number,
   referenceDate: number,
-  activeWeekdays?: {
-    mon: boolean,
-    tue: boolean,
-    wed: boolean,
-    thu: boolean,
-    fri: boolean,
-    sat: boolean,
-    sun: boolean,
-  },
+  activeWeekdays?: ActiveWeekdays,
 };
 
 export type WeekdayToggles = { [key: string] : 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' };
@@ -34,3 +36,7 @@ export type Task = {
 export type User = {
   uid: string,
 };
+
+export type OptionalKeys<T> = {
+  [P in keyof T]?: T[P];
+}

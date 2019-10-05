@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
 import { create } from '../repositories/tasks';
-import sendResponse from './sendResponse';
+import sendSlackResponse from './sendSlackResponse';
 import { findBySlackUserId } from '../repositories/users';
 
 const handleCreateTask = async (req: Request, res: Response) => {
@@ -39,10 +39,10 @@ const handleCreateTask = async (req: Request, res: Response) => {
 
     console.log(`[POST slack/task] Task created. id=${taskId}`);
 
-    return sendResponse(res, `Task created! "${title}" with impact ${impact} and effort ${effort}`);
+    return sendSlackResponse(res, `Task created! "${title}" with impact ${impact} and effort ${effort}`);
   } catch (error) {
     console.log(`[POST slack/task] Task create error. message=${error.message}`);
-    return sendResponse(res, `Error: ${error.message}`);
+    return sendSlackResponse(res, `Error: ${error.message}`);
   }
 };
 

@@ -1,6 +1,6 @@
 
 import { Request, Response } from 'express';
-import sendResponse from './sendResponse';
+import sendSlackResponse from './sendSlackResponse';
 import { findByEmail, findBySlackUserId, setSlackUserId } from '../repositories/users';
 
 /**
@@ -48,10 +48,10 @@ export const signin = async (req: Request, res: Response) => {
     await setSlackUserId(userId, slackUserId);
 
     console.log(`[POST slack/signin] Success. userId=${userId} slackUserId=${slackUserId}`);
-    return sendResponse(res, `Success, signed in to Aizen with ${aizenEmailAddress}`);
+    return sendSlackResponse(res, `Success, signed in to Aizen with ${aizenEmailAddress}`);
   } catch (error) {
     console.log(`[POST slack/signin] Error. message=${error.message}`);
-    return sendResponse(res, `Error: ${error.message}`);
+    return sendSlackResponse(res, `Error: ${error.message}`);
   }
 };
 
@@ -72,9 +72,9 @@ export const signout = async (req: Request, res: Response) => {
     await setSlackUserId(userId, null);
 
     console.log(`[POST slack/signout] Success. userId=${userId} slackUserId=${slackUserId}`);
-    return sendResponse(res, 'Success, signed out of Aizen');
+    return sendSlackResponse(res, 'Success, signed out of Aizen');
   } catch (error) {
     console.log(`[POST slack/signout] Error. message=${error.message}`);
-    return sendResponse(res, `Error: ${error.message}`);
+    return sendSlackResponse(res, `Error: ${error.message}`);
   }
 };

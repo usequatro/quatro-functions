@@ -18,7 +18,7 @@ const KEY_DEFAULTS = {
   userId: null,
 };
 
-export const findbyId = async (id: string) : Promise<Task> => {
+export const findById = async (id: string) : Promise<Task> => {
   const db = admin.firestore();
 
   const docRef = db.collection(TASKS).doc(id);
@@ -36,7 +36,8 @@ export const findLastByRecurringConfigId = async (recurringConfigId: string) : P
 
   const query = db.collection(TASKS)
     .where('recurringConfigId', '==', recurringConfigId)
-    .orderBy('created')
+    .where('trashed', '==', null)
+    .orderBy('created', 'desc')
     .limit(1);
   const querySnapshot = await query.get();
 
