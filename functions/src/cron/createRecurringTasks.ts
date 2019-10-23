@@ -93,7 +93,7 @@ export default async (dayOffset:number = 0) => {
       const daysOfDifference = differenceInDays(now, recurringConfig.referenceDate);
       const newTask = {
         ...task,
-        title: `${task.title} 🔁`,
+        title: `${task.title.replace(/\s[🔁]+$/, '')} 🔁`,
         created: Date.now(),
         scheduledStart: task.scheduledStart ? addDays(task.scheduledStart, daysOfDifference).getTime() : null,
         due: task.due ? addDays(task.due, daysOfDifference).getTime() : null,
