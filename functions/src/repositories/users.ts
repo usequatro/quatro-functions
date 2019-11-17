@@ -1,3 +1,7 @@
+/**
+ * Functions to interact with user entities.
+ */
+
 import admin from 'firebase-admin';
 import { User } from '../types';
 

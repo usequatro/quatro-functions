@@ -1,10 +1,17 @@
+/**
+ * This migration is to remove an unused key from all task entities.
+ *
+ * ⚠️ ⚠️ ⚠️
+ * Need to improve this, here we're currently retrieving ALL tasks, which consumes a lot of
+ * Firestore calls.
+ */
+
 const COLLECTION = 'tasks';
 
 const LIMIT = 1000;
 
 export default (db: any, key: string) => {
   return db.collection(COLLECTION).get().then(async (querySnapshot: any) => {
-    // ⚠️ Need to improve this, here we're currently retrieving ALL tasks.
     const tasks = querySnapshot.docs.map((doc: any) => ([doc.id, doc.data()]));
 
     let updatedCount = 0;

@@ -1,3 +1,7 @@
+/**
+ * Functionality to create task instances for recurring configurations.
+ */
+
 import differenceInWeeks from 'date-fns/differenceInWeeks';
 import differenceInDays from 'date-fns/differenceInDays';
 import addDays from 'date-fns/addDays';

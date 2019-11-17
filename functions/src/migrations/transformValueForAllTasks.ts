@@ -1,3 +1,11 @@
+/**
+ * This migration is to apply a transformation on a key value for all task entities.
+ *
+ * ⚠️ ⚠️ ⚠️
+ * Need to improve this, here we're currently retrieving ALL tasks, which consumes a lot of
+ * Firestore calls.
+ */
+
 const COLLECTION = 'tasks';
 
 const LIMIT = 1000;

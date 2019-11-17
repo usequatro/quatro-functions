@@ -1,4 +1,6 @@
-// Command to deploy: firebase deploy --only functions
+/**
+ * Aizen's Firebase functions
+ */
 
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
@@ -6,15 +8,16 @@ import admin from 'firebase-admin';
 import slackApp from './slack/app';
 import createRecurringTasks from './cron/createRecurringTasks';
 
-// import addKeyToAllTasks from './migrations/addKeyToAllTasks';
-// import renameKeyInAllTasks from './migrations/renameKeyInAllTasks';
-// import deleteKeyForAllTasks from './migrations/deleteKeyForAllTasks';
-// import transformValueForAllTasks from './migrations/transformValueForAllTasks';
-
 admin.initializeApp(functions.config().firebase);
 
 export const slack = functions.https.onRequest(slackApp);
 
+/**
+ * Scheduled task for creating recurring tasks every morning.
+ * Note that this functionality uses Google Cloud Pub/Sub topic and Google Cloud Scheduler, separate
+ * APIs that also need to be enabled.
+ * @see https://firebase.google.com/docs/functions/schedule-functions
+ */
 export const scheduledCreateRecurringTasks = functions.pubsub
   .schedule('1 0 * * *') // This will be run every day at 00:01 AM Eastern
   .timeZone('America/New_York')
@@ -23,13 +26,18 @@ export const scheduledCreateRecurringTasks = functions.pubsub
     return null;
   });
 
-// temporary, to test calling the funcionality directly
+// Temporary, to test calling the funcionality directly
 export const recurring = functions.https.onRequest(async (req: functions.Request, res: functions.Response) => {
   const dayOffset = parseInt(req.query.offset || 0, 10);
   await createRecurringTasks(dayOffset);
   res.status(200).send('Recurring tasks handled');
 });
 
+/**
+ * Data migrations.
+ * For running, uncomment this code, deploy, execute, comment and deploy.
+ * Migrations are found in /src/migrations
+ */
 // export const migrate = functions.https.onRequest(async (request, response) => {
   // const db = admin.firestore();
 

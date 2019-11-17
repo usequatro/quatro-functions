@@ -1,3 +1,7 @@
+/**
+ * Functions to interact with task entities.
+ */
+
 import admin from 'firebase-admin';
 import HttpError from '../HttpError';
 import { Task } from '../types';

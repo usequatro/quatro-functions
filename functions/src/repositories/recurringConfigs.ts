@@ -1,3 +1,7 @@
+/**
+ * Functions to interact with recurring config entities.
+ */
+
 import admin from 'firebase-admin';
 import HttpError from '../HttpError';
 import { RecurringConfig, OptionalKeys } from '../types';
