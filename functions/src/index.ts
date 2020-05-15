@@ -1,5 +1,5 @@
 /**
- * Aizen's Firebase functions
+ * Quatro's Firebase functions
  */
 
 import * as functions from 'firebase-functions';

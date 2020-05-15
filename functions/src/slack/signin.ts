@@ -28,9 +28,9 @@ export const signin = async (req: Request, res: Response) => {
       user_id: slackUserId,
     } = req.body;
     const receivedEmail = text.replace(/^signin\s/, '').trim();
-    const aizenEmailAddress = extractEmailAddress(receivedEmail);
+    const accountEmailAddress = extractEmailAddress(receivedEmail);
 
-    if (!aizenEmailAddress) {
+    if (!accountEmailAddress) {
       throw new Error(`Invalid format. Received "${text}". Expected: signin [email]`);
     }
     if (!slackUserId) {
@@ -44,11 +44,11 @@ export const signin = async (req: Request, res: Response) => {
       }
     } catch (error) {}
 
-    const [userId,] = await findByEmail(aizenEmailAddress);
+    const [userId,] = await findByEmail(accountEmailAddress);
     await setSlackUserId(userId, slackUserId);
 
     console.log(`[POST slack/signin] Success. userId=${userId} slackUserId=${slackUserId}`);
-    return sendSlackResponse(res, `Success, signed in to Aizen with ${aizenEmailAddress}`);
+    return sendSlackResponse(res, `Success, signed in to Quatro with ${accountEmailAddress}`);
   } catch (error) {
     console.log(`[POST slack/signin] Error. message=${error.message}`);
     return sendSlackResponse(res, `Error: ${error.message}`);
@@ -72,7 +72,7 @@ export const signout = async (req: Request, res: Response) => {
     await setSlackUserId(userId, null);
 
     console.log(`[POST slack/signout] Success. userId=${userId} slackUserId=${slackUserId}`);
-    return sendSlackResponse(res, 'Success, signed out of Aizen');
+    return sendSlackResponse(res, 'Success, signed out of Quatro');
   } catch (error) {
     console.log(`[POST slack/signout] Error. message=${error.message}`);
     return sendSlackResponse(res, `Error: ${error.message}`);
