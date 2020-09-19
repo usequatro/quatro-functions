@@ -51,10 +51,6 @@ const appliesNow = (recurringConfig:RecurringConfig, taskScheduledStart: number,
       log(`⚠️ Month not implemented`);
       return false; // to do
     }
-    case DurationUnits.Year: {
-      log(`⚠️ Year not implemented`);
-      return false; // to do
-    }
     default:
       log(`⚠️ Unknown unit ${unit}`);
       return false;

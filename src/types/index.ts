@@ -12,7 +12,6 @@ export enum DurationUnits {
   Day = 'day',
   Week = 'week',
   Month = 'month',
-  Year = 'year',
 }
 
 export type RecurringConfig = {
