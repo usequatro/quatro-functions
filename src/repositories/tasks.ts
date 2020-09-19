@@ -29,9 +29,12 @@ export const findById = async (id: string) : Promise<Task> => {
   const docSnapshot = await docRef.get();
 
   if (docSnapshot.exists) {
-    const task = <Task> docSnapshot.data();
-    return task;
+    const task = <Task>docSnapshot.data();
+    if (!task.trashed) {
+      return task;
+    }
   }
+
   throw new HttpError(404, 'Task not found');
 };
 

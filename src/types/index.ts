@@ -1,4 +1,3 @@
-
 type ActiveWeekdays = {
   mon: boolean,
   tue: boolean,
@@ -9,15 +8,29 @@ type ActiveWeekdays = {
   sun: boolean,
 };
 
+export enum DurationUnits {
+  Day = 'day',
+  Week = 'week',
+  Month = 'month',
+  Year = 'year',
+};
+
 export type RecurringConfig = {
+  taskId: string,
   userId: string,
-  unit: 'day' | 'week' | 'month' | 'year',
+  unit: DurationUnits,
   amount: number,
   referenceDate: number,
+  lastRunDate: number,
   activeWeekdays?: ActiveWeekdays,
 };
 
 export type WeekdayToggles = { [key: string] : 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' };
+
+export enum TaskSources {
+  User = 'user',
+  Repeat = 'repeat',
+};
 
 export type Task = {
   title: string,
@@ -31,6 +44,8 @@ export type Task = {
   scheduledStart?: number | null,
   trashed?: number | null,
   userId?: string,
+  recurringConfigId?: string | null,
+  source?: TaskSources,
 };
 
 export type User = {

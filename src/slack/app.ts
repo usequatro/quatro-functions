@@ -2,6 +2,7 @@
  * Slack bot backend
  */
 
+import * as functions from 'firebase-functions';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 
@@ -35,4 +36,4 @@ app.post('/', async (req: Request, res: Response) => {
   }
 });
 
-export default app;
+export default functions.https.onRequest(app)

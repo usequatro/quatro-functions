@@ -1,19 +1,28 @@
 # Quatro Firebase Functions
 
-All code is inside [`functions/src`](functions/src). See [`index.ts`](functions/src/index.ts) for currently available endpoints and scheduled functions.
+All code is inside [`src`](src). See [`index.ts`](src/index.ts) for currently available endpoints and scheduled functions.
 
 ## Description
 
-As of Q4 2019, the systems implemented include:
+- Recurring task auto-creation.
+- Prototype of Slack bot prototype. See [`functions/src/slack`](functions/src/slack)
 
-- Slack bot prototype. See [`functions/src/slack`](functions/src/slack)
-- Recurring task auto-creation every morning.
-- Data migration examples.
+## Firebase Environments
+There are 2 Firebase environments.
 
-## Deploying changes
+* `dev`, for development environments, with Firebase project `quatro-dev-88030`
+* `prod`, with Firebase project `tasket-project`
 
-```
-firebase deploy --only functions
-```
+You can check which one you have active locally by running firebase use. To switch, use firebase use [default|prod]
 
-More about this in [Firebase's documentation](https://firebase.google.com/docs/functions/manage-functions).
+## Environment variables
+
+To check what the environment variables are in the cloud, use `firebase functions:config:get`
+
+Where to get all the env var values from? Ask the team.
+
+## Deploying
+
+* All functions: `npm run deploy` or `firebase deploy --only functions`
+* Only one function: `firebase deploy --only functions:[fname]`
+* Multiple functions: `firebase deploy --only functions:[fname1],functions:[fname2]`
