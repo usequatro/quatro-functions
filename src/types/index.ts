@@ -1,11 +1,21 @@
+export enum DaysOfWeek {
+  Monday = 'mon',
+  Tuesday = 'tue',
+  Wednesday = 'wed',
+  Thursday = 'thu',
+  Friday = 'fri',
+  Saturday = 'sat',
+  Sunday = 'sun',
+}
+
 type ActiveWeekdays = {
-  mon: boolean,
-  tue: boolean,
-  wed: boolean,
-  thu: boolean,
-  fri: boolean,
-  sat: boolean,
-  sun: boolean,
+  [DaysOfWeek.Monday]: boolean,
+  [DaysOfWeek.Tuesday]: boolean,
+  [DaysOfWeek.Wednesday]: boolean,
+  [DaysOfWeek.Thursday]: boolean,
+  [DaysOfWeek.Friday]: boolean,
+  [DaysOfWeek.Saturday]: boolean,
+  [DaysOfWeek.Sunday]: boolean,
 };
 
 export enum DurationUnits {
@@ -19,13 +29,8 @@ export type RecurringConfig = {
   userId: string,
   unit: DurationUnits,
   amount: number,
-  referenceDate: number,
-  lastRunDate: number,
+  lastRunDate?: number | null,
   activeWeekdays?: ActiveWeekdays,
-};
-
-export type WeekdayToggles = {
-  [key: string]: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 };
 
 export enum TaskSources {

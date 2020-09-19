@@ -5,17 +5,28 @@
 import * as functions from 'firebase-functions';
 import differenceInWeeks from 'date-fns/differenceInWeeks';
 import differenceInDays from 'date-fns/differenceInDays';
+import differenceInCalendarMonths from 'date-fns/differenceInCalendarMonths';
+import addMonths from 'date-fns/addMonths';
 import addDays from 'date-fns/addDays';
 import isSameDay from 'date-fns/isSameDay';
 import setDayOfYear from 'date-fns/setDayOfYear';
 import getDayOfYear from 'date-fns/getDayOfYear';
+import getDate from 'date-fns/getDate';
+import isMonday from 'date-fns/isMonday';
+import isTuesday from 'date-fns/isTuesday';
+import isWednesday from 'date-fns/isWednesday';
+import isThursday from 'date-fns/isThursday';
+import isFriday from 'date-fns/isFriday';
+import isSaturday from 'date-fns/isSaturday';
+import isSunday from 'date-fns/isSunday';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
-import { RecurringConfig, WeekdayToggles, TaskSources, DurationUnits } from '../types';
+import { RecurringConfig, TaskSources, DurationUnits, DaysOfWeek } from '../types';
+import { isAfter } from 'date-fns';
 
-const log = (message:string) => console.log(`[createRecurringTasks] ${message}`);
+const log = (message: string) => console.log(`[createRecurringTasks] ${message}`);
 
-const appliesNow = (recurringConfig:RecurringConfig, taskScheduledStart: number, now:number) : boolean => {
+export const applies = (recurringConfig:RecurringConfig, taskScheduledStart: number, now:number) : boolean => {
   const {
     unit,
     amount,
@@ -37,19 +48,39 @@ const appliesNow = (recurringConfig:RecurringConfig, taskScheduledStart: number,
         log(`⚠️ Missing arguments for week recurrence`);
         return false;
       }
-      const weekdayNumber = (new Date(now)).getDay();
-      const numbersToShortName : WeekdayToggles = { 0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat' };
-      const weekday = numbersToShortName[`${weekdayNumber}`];
-      const weekdayEnabled = activeWeekdays ? activeWeekdays[weekday] : false;
-
       const weekDifference = differenceInWeeks(now, taskScheduledStart);
       const fulfillsSeparationAmount = weekDifference % amount === 0;
 
-      return fulfillsSeparationAmount && weekdayEnabled;
+      if (!fulfillsSeparationAmount) {
+        return false;
+      }
+
+      return (
+        (isMonday(now) && activeWeekdays[DaysOfWeek.Monday])
+        || (isTuesday(now) && activeWeekdays[DaysOfWeek.Tuesday])
+        || (isWednesday(now) && activeWeekdays[DaysOfWeek.Wednesday])
+        || (isThursday(now) && activeWeekdays[DaysOfWeek.Thursday])
+        || (isFriday(now) && activeWeekdays[DaysOfWeek.Friday])
+        || (isSaturday(now) && activeWeekdays[DaysOfWeek.Saturday])
+        || (isSunday(now) && activeWeekdays[DaysOfWeek.Sunday])
+      );
     }
     case DurationUnits.Month: {
-      log(`⚠️ Month not implemented`);
-      return false; // to do
+      const calendarMonthDifference = differenceInCalendarMonths(now, taskScheduledStart);
+      const fulfillsSeparationAmount = calendarMonthDifference % amount === 0;
+
+      if (!fulfillsSeparationAmount) {
+        return false;
+      }
+
+      // addMonths() is great because it'll cap at the latest day of month if overflowing the days
+      const applicableDateInThisMonth = addMonths(taskScheduledStart, calendarMonthDifference);
+      if (getDate(now) !== getDate(applicableDateInThisMonth)) {
+        return false;
+      }
+
+      // If today is the day, make sure we trigger this after the time
+      return isAfter(now, applicableDateInThisMonth);
     }
     default:
       log(`⚠️ Unknown unit ${unit}`);
@@ -58,7 +89,7 @@ const appliesNow = (recurringConfig:RecurringConfig, taskScheduledStart: number,
 };
 
 const alreadyRunToday = (recurringConfig:RecurringConfig, now:number) => (
-  isSameDay(now, recurringConfig.lastRunDate)
+  recurringConfig.lastRunDate && isSameDay(now, recurringConfig.lastRunDate)
 );
 
 /**
@@ -98,7 +129,7 @@ export default functions.pubsub
           continue;
         }
 
-        if (!appliesNow(recurringConfig, task.scheduledStart, now)) {
+        if (!applies(recurringConfig, task.scheduledStart, now)) {
           log(`ℹ️ Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}`);
           continue;
         }
