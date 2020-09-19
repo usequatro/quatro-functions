@@ -21,7 +21,7 @@ const extractEmailAddress = (text : string) : string | undefined => {
   return undefined;
 };
 
-export const signin = async (req: Request, res: Response) => {
+export const signin = async (req: Request, res: Response): Promise<Response> => {
   try {
     const {
       text,

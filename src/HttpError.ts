@@ -4,6 +4,7 @@
 class HttpError extends Error {
   httpCode: number;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(httpCode: number, ...args: any[]) {
     super(...args);
     this.httpCode = httpCode;

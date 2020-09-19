@@ -7,28 +7,29 @@ import differenceInWeeks from 'date-fns/differenceInWeeks';
 import differenceInDays from 'date-fns/differenceInDays';
 import addDays from 'date-fns/addDays';
 import isSameDay from 'date-fns/isSameDay';
+import setDayOfYear from 'date-fns/setDayOfYear';
+import getDayOfYear from 'date-fns/getDayOfYear';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
 import { RecurringConfig, WeekdayToggles, TaskSources, DurationUnits } from '../types';
 
 const log = (message:string) => console.log(`[createRecurringTasks] ${message}`);
 
-const appliesToday = (recurringConfig:RecurringConfig, now:number) : boolean => {
+const appliesNow = (recurringConfig:RecurringConfig, taskScheduledStart: number, now:number) : boolean => {
   const {
     unit,
     amount,
-    referenceDate,
     activeWeekdays,
   } = recurringConfig;
 
-  if (!unit || !amount || !referenceDate) {
+  if (!unit || !amount) {
     log(`⚠️ Missing arguments for recurrence`);
     return false;
   }
 
   switch (unit) {
     case DurationUnits.Day: {
-      const dayDifference = differenceInDays(now, referenceDate);
+      const dayDifference = differenceInDays(now, taskScheduledStart);
       return dayDifference % amount === 0;
     }
     case DurationUnits.Week: {
@@ -41,7 +42,7 @@ const appliesToday = (recurringConfig:RecurringConfig, now:number) : boolean => 
       const weekday = numbersToShortName[`${weekdayNumber}`];
       const weekdayEnabled = activeWeekdays ? activeWeekdays[weekday] : false;
 
-      const weekDifference = differenceInWeeks(now, referenceDate);
+      const weekDifference = differenceInWeeks(now, taskScheduledStart);
       const fulfillsSeparationAmount = weekDifference % amount === 0;
 
       return fulfillsSeparationAmount && weekdayEnabled;
@@ -72,35 +73,37 @@ const alreadyRunToday = (recurringConfig:RecurringConfig, now:number) => (
  * @see https://crontab.guru/
  */
 export default functions.pubsub
-  .schedule('every 1 minute')
-  .onRun(async (context) => {
+  .schedule('*/5 * * * *') // https://crontab.guru/every-5-minutes
+  .onRun(async () => {
     const recurringConfigsResult = await findAll();
     const now = Date.now();
     const createdTaskIds = [];
 
-    log(`ℹ️ Found ${recurringConfigsResult.length} recurring configs`);
+    const configsExcludedAlreadyRun = recurringConfigsResult.filter(([, recurringConfig]) =>
+      !alreadyRunToday(recurringConfig, now)
+    );
 
-    for (const [rcId, recurringConfig] of recurringConfigsResult) {
+    for (const [rcId, recurringConfig] of configsExcludedAlreadyRun) {
       try {
-        if (alreadyRunToday(recurringConfig, now)) {
-          log(`ℹ️ Skipped ${rcId} because it was already executed today. recurringConfig=${JSON.stringify(recurringConfig)}`);
-          continue;
-        }
-        if (!appliesToday(recurringConfig, now)) {
-          log(`ℹ️ Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}`);
-          continue;
-        }
-
         const { taskId } = recurringConfig;
         if (!taskId) {
-          log(`ℹ️ Processed ${rcId} applicable today. No task found`);
+          log(`ℹ️ Skipped ${rcId} that was applicable today because no taskId found`);
           continue;
         }
 
         const task = await findById(taskId);
-
-        if (!taskId || !task) {
+        if (!task) {
           log(`🛑 Bad data, recurring config ${rcId} has no task ID`);
+          continue;
+        }
+
+        if (!task.scheduledStart) {
+          log(`🛑 Bad data. No valid reference date found for task ${taskId}`);
+          continue;
+        }
+
+        if (!appliesNow(recurringConfig, task.scheduledStart, now)) {
+          log(`ℹ️ Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}`);
           continue;
         }
 
@@ -110,17 +113,17 @@ export default functions.pubsub
           continue;
         }
 
-        const referenceDifference = differenceInDays(now, recurringConfig.referenceDate);
+        const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
+        const newDue = task.due
+          ? addDays(task.due, differenceInDays(newScheduledStart, task.scheduledStart)).getTime()
+          : null;
+
         const newTask = {
           ...task,
           title: task.title,
           created: Date.now(),
-          scheduledStart: task.scheduledStart
-            ? addDays(task.scheduledStart, referenceDifference).getTime()
-            : null,
-          due: task.due
-            ? addDays(task.due, referenceDifference).getTime()
-            : null,
+          scheduledStart: newScheduledStart,
+          due: newDue,
           completed: null,
           recurringConfigId: rcId,
           source: TaskSources.Repeat,
@@ -136,10 +139,10 @@ export default functions.pubsub
 
         createdTaskIds.push(newTaskId);
 
-        log(`ℹ️ Processed ${rcId} applicable today. sourceTaskId=${taskId} newTaskId=${newTaskId}`);
+        log(`✅ Processed ${rcId} applicable today. sourceTaskId=${taskId} newTaskId=${newTaskId}`);
       } catch (error) {
         log(`🛑 Error while processing recurring config ${rcId}`);
-        throw error;
+        console.error(error);
       }
     }
     log(`ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${(Date.now() - now)} milliseconds`);
