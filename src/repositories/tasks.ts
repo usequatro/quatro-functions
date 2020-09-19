@@ -20,6 +20,7 @@ const KEY_DEFAULTS = {
   title: '',
   trashed: null,
   userId: null,
+  recurringConfigId: null,
 };
 
 export const findById = async (id: string) : Promise<Task> => {
@@ -54,13 +55,6 @@ export const findLastByRecurringConfigId = async (recurringConfigId: string) : P
 };
 
 export const create = async (userId: string, task: Task) : Promise<[string, Task]> => {
-  if (task.impact < 1 || task.impact > 7) {
-    throw new HttpError(400, 'Impact must be between 1 and 7');
-  }
-  if (task.effort < 1 || task.effort > 7) {
-    throw new HttpError(400, 'Effort must be between 1 and 7');
-  }
-
   const finalTask : Task = {
     ...KEY_DEFAULTS,
     ...task,

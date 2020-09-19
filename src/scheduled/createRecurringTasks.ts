@@ -145,6 +145,9 @@ export default functions.pubsub
         console.error(error);
       }
     }
-    log(`ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${(Date.now() - now)} milliseconds`);
+
+    if (createdTaskIds.length > 0) {
+      log(`ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${(Date.now() - now)} milliseconds`);
+    }
     return null;
   });
