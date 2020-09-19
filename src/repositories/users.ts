@@ -31,8 +31,8 @@ export const findBySlackUserId = async (slackUserId: string) : Promise<[string, 
   return [userId, <User> userRecord.toJSON()];
 };
 
-export const setSlackUserId = async (userId: string, slackUserId: string | null) => (
+export const setSlackUserId = async (userId: string, slackUserId: string | null): Promise<void> => {
   await admin.firestore().collection(USERS).doc(userId).set({
     slackUserId,
   })
-);
+};

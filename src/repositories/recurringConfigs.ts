@@ -35,7 +35,7 @@ export const findById = async (id: string) : Promise<RecurringConfig> => {
   throw new HttpError(404, 'Recurring config not found');
 };
 
-export const create = async (userId: string, entity: RecurringConfig) : Promise<[string, object?]> => {
+export const create = async (userId: string, entity: RecurringConfig) : Promise<[string, RecurringConfig]> => {
   const finalEntity : RecurringConfig = {
     ...entity,
     userId,
@@ -45,12 +45,13 @@ export const create = async (userId: string, entity: RecurringConfig) : Promise<
 
   const docRef = await db.collection(RECURRING_CONFIGS).add(finalEntity);
   const docSnapshot = await docRef.get();
-  return [docSnapshot.id, docSnapshot.data()];
+  return [docSnapshot.id, docSnapshot.data() as RecurringConfig];
 };
 
-export const update = async (rcId: string, updates: OptionalKeys<RecurringConfig>) => {
+export const update = async (rcId: string, updates: OptionalKeys<RecurringConfig>): Promise<void> => {
   const db = admin.firestore();
 
   const docRef = await db.collection(RECURRING_CONFIGS).doc(rcId);
-  return docRef.set(updates, { merge: true });
+  await docRef.set(updates, { merge: true });
+  return;
 };

@@ -141,7 +141,7 @@ export default functions.pubsub
         log(`🛑 Error while processing recurring config ${rcId}`);
         throw error;
       }
-    };
+    }
     log(`ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${(Date.now() - now)} milliseconds`);
     return null;
   });

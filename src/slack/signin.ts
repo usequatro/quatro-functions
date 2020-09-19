@@ -42,7 +42,9 @@ export const signin = async (req: Request, res: Response) => {
       if (alreadyConnectedUserId) {
         throw new Error('Slack account already connected. Sign out first before connecting to another email address');
       }
-    } catch (error) {}
+    } catch (error) {
+      //
+    }
 
     const [userId,] = await findByEmail(accountEmailAddress);
     await setSlackUserId(userId, slackUserId);
@@ -55,7 +57,7 @@ export const signin = async (req: Request, res: Response) => {
   }
 };
 
-export const signout = async (req: Request, res: Response) => {
+export const signout = async (req: Request, res: Response): Promise<Response> => {
   try {
     const slackUserId: string = req.body.user_id;
 

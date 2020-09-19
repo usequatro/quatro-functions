@@ -13,7 +13,7 @@ export enum DurationUnits {
   Week = 'week',
   Month = 'month',
   Year = 'year',
-};
+}
 
 export type RecurringConfig = {
   taskId: string,
@@ -25,12 +25,14 @@ export type RecurringConfig = {
   activeWeekdays?: ActiveWeekdays,
 };
 
-export type WeekdayToggles = { [key: string] : 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun' };
+export type WeekdayToggles = {
+  [key: string]: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+};
 
 export enum TaskSources {
   User = 'user',
   Repeat = 'repeat',
-};
+}
 
 export type Task = {
   title: string,

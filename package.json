@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "scripts": {
-    "lint": "tslint --project tsconfig.json",
+    "lint": "eslint . --ext .ts",
     "build": "tsc",
     "serve": "npm run build && firebase serve --only functions",
     "shell": "npm run build && firebase functions:shell",
@@ -22,8 +22,10 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.5",
-    "tslint": "^5.12.0",
-    "typescript": "^3.2.2"
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0",
+    "typescript": "^4.0.3"
   },
   "private": true
 }

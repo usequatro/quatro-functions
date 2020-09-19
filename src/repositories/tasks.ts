@@ -53,7 +53,7 @@ export const findLastByRecurringConfigId = async (recurringConfigId: string) : P
     : [null, null];
 };
 
-export const create = async (userId: string, task: Task) : Promise<[string, object?]> => {
+export const create = async (userId: string, task: Task) : Promise<[string, Task]> => {
   if (task.impact < 1 || task.impact > 7) {
     throw new HttpError(400, 'Impact must be between 1 and 7');
   }
@@ -72,5 +72,5 @@ export const create = async (userId: string, task: Task) : Promise<[string, obje
 
   const docRef = await db.collection(TASKS).add(finalTask);
   const docSnapshot = await docRef.get();
-  return [docSnapshot.id, docSnapshot.data()];
+  return [docSnapshot.id, docSnapshot.data() as Task];
 };

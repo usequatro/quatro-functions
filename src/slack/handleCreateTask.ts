@@ -4,7 +4,7 @@ import { create } from '../repositories/tasks';
 import sendSlackResponse from './sendSlackResponse';
 import { findBySlackUserId } from '../repositories/users';
 
-const handleCreateTask = async (req: Request, res: Response) => {
+const handleCreateTask = async (req: Request, res: Response): Promise<Response> => {
   const {
     text,
     user_id: slackUserId,
