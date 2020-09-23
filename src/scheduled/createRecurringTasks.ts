@@ -8,6 +8,7 @@ import differenceInDays from 'date-fns/differenceInDays';
 import differenceInCalendarMonths from 'date-fns/differenceInCalendarMonths';
 import addMonths from 'date-fns/addMonths';
 import addDays from 'date-fns/addDays';
+import isToday from 'date-fns/isToday';
 import isSameDay from 'date-fns/isSameDay';
 import setDayOfYear from 'date-fns/setDayOfYear';
 import getDayOfYear from 'date-fns/getDayOfYear';
@@ -139,6 +140,10 @@ export default functions.pubsub
         if (!userId) {
           log(`🛑 Bad data. No userId found for task ${mostRecentTaskId}`);
           continue;
+        }
+
+        if (task.created && isToday(task.created)) {
+          log(`ℹ️ Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`);
         }
 
         const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
