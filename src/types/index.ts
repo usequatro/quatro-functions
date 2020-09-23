@@ -25,7 +25,7 @@ export enum DurationUnits {
 }
 
 export type RecurringConfig = {
-  taskId: string,
+  mostRecentTaskId: string,
   userId: string,
   unit: DurationUnits,
   amount: number,
