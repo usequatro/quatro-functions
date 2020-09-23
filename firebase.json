@@ -3,7 +3,9 @@
     "source": ".",
     "predeploy": [
       "npm --prefix \"$RESOURCE_DIR\" run lint",
+      "npm --prefix \"$RESOURCE_DIR\" run test",
       "npm --prefix \"$RESOURCE_DIR\" run build"
-    ]
+    ],
+    "postdeploy": "./scripts/notifyDeploy.sh"
   }
 }

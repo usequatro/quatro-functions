@@ -10,7 +10,7 @@ describe('createRecurringTasks', () => {
     it('should apply to an every day configuration', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Day,
           amount: 1,
@@ -23,7 +23,7 @@ describe('createRecurringTasks', () => {
     it('should not apply when the the day difference is not the amount specified', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Day,
           amount: 3,
@@ -36,7 +36,7 @@ describe('createRecurringTasks', () => {
     it('should apply to this Monday if we re doing it all Mondays', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Week,
           amount: 1,
@@ -58,7 +58,7 @@ describe('createRecurringTasks', () => {
     it('should not apply to this Monday if we re doing it all Weekends', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Week,
           amount: 1,
@@ -80,7 +80,7 @@ describe('createRecurringTasks', () => {
     it('should not apply to the day before the reference date of the month', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Month,
           amount: 1,
@@ -93,7 +93,7 @@ describe('createRecurringTasks', () => {
     it('should apply to this date of the month', () => {
       expect(applies(
         {
-          taskId: '123456',
+          mostRecentTaskId: '123456',
           userId: 'abcdef',
           unit: DurationUnits.Month,
           amount: 1,
