@@ -127,7 +127,7 @@ export default functions.pubsub
         }
 
         if (!task.scheduledStart) {
-          log(`🛑 Bad data. No valid reference date found for task ${mostRecentTaskId}`);
+          log(`🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}`);
           continue;
         }
 
@@ -138,7 +138,7 @@ export default functions.pubsub
 
         const { userId } = task;
         if (!userId) {
-          log(`🛑 Bad data. No userId found for task ${mostRecentTaskId}`);
+          log(`🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}`);
           continue;
         }
 
