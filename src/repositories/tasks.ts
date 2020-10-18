@@ -18,7 +18,6 @@ const KEY_DEFAULTS = {
   impact: null,
   scheduledStart: null,
   title: '',
-  trashed: null,
   userId: null,
   recurringConfigId: null,
 };
@@ -31,9 +30,7 @@ export const findById = async (id: string) : Promise<Task> => {
 
   if (docSnapshot.exists) {
     const task = <Task>docSnapshot.data();
-    if (!task.trashed) {
-      return task;
-    }
+    return task;
   }
 
   throw new HttpError(404, 'Task not found');
@@ -44,7 +41,6 @@ export const findLastByRecurringConfigId = async (recurringConfigId: string) : P
 
   const query = db.collection(TASKS)
     .where('recurringConfigId', '==', recurringConfigId)
-    .where('trashed', '==', null)
     .orderBy('created', 'desc')
     .limit(1);
   const querySnapshot = await query.get();
