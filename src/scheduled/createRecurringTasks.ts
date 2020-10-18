@@ -101,7 +101,7 @@ const alreadyRunToday = (recurringConfig:RecurringConfig, now:number) => (
  * @see https://crontab.guru/
  */
 export default functions.pubsub
-  .schedule('*/5 * * * *') // https://crontab.guru/every-5-minutes
+  .schedule('*/15 * * * *') // https://crontab.guru/every-15-minutes
   .onRun(async () => {
     const recurringConfigsResult = await findAll();
     const now = Date.now();
