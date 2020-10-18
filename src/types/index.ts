@@ -48,7 +48,6 @@ export type Task = {
   description?: string | null,
   due?: number | null,
   scheduledStart?: number | null,
-  trashed?: number | null,
   userId?: string,
   recurringConfigId?: string | null,
   source?: TaskSources,
