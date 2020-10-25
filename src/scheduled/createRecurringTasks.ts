@@ -113,37 +113,49 @@ export default functions.pubsub
 
     for (const [rcId, recurringConfig] of configsExcludedAlreadyRun) {
       try {
-        const { mostRecentTaskId } = recurringConfig;
+        const { mostRecentTaskId, userId = '' } = recurringConfig;
         if (!mostRecentTaskId) {
-          log(`ℹ️ Skipped ${rcId} that was applicable today because no taskId found`);
+          log(`🛑 Skipped ${rcId} that was applicable today because no taskId found. userId=${userId}`);
           continue;
         }
 
-        const task = await findById(mostRecentTaskId);
+        const task = await findById(mostRecentTaskId)
+          .catch((error) => { // resolve the promise, so we return `undefined` instead of throwing
+            console.error(error);
+          });
         if (!task) {
           // @todo: consider deleting the recurring config here, since it's invalid
-          log(`🛑 Bad data, recurring config ${rcId} has no task ID`);
+          log(`👻 Skipped  ${rcId} because most recent task ${mostRecentTaskId} wasn't found. userId=${userId}`);
           continue;
         }
 
         if (!task.scheduledStart) {
-          log(`🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}`);
+          log(`🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}. userId=${userId}`);
           continue;
         }
 
         if (!applies(recurringConfig, task.scheduledStart, now)) {
-          log(`ℹ️ Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}`);
+          log(`🔁 Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}. userId=${userId}`);
           continue;
         }
 
-        const { userId } = task;
-        if (!userId) {
-          log(`🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}`);
+        if (!task.completed) {
+          log(`☑️ Skipped ${rcId} because its most recent task ${mostRecentTaskId} isn't completed. userId=${userId}`);
+          continue;
+        }
+
+        const { userId: taskUserId } = task;
+        if (!taskUserId) {
+          log(`🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}. userId=${userId}`);
+          continue;
+        }
+        if (taskUserId !== userId) {
+          log(`🛑 Bad data with ${rcId}, task userId ${taskUserId} doesn't match config userId. userId=${userId}`);
           continue;
         }
 
         if (task.created && isToday(task.created)) {
-          log(`ℹ️ Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`);
+          log(`📅 Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`);
         }
 
         const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
@@ -161,7 +173,7 @@ export default functions.pubsub
           recurringConfigId: rcId,
           source: TaskSources.Repeat,
         };
-        const [newTaskId] = await create(userId, newTask);
+        const [newTaskId] = await create(taskUserId, newTask);
 
         await updateRecurringConfig(rcId, {
           // update lastRunDate so that we don't create duplicates for the same day
@@ -172,7 +184,7 @@ export default functions.pubsub
 
         createdTaskIds.push(newTaskId);
 
-        log(`✅ Processed ${rcId} applicable today. sourceTaskId=${mostRecentTaskId} newTaskId=${newTaskId}`);
+        log(`✅ Processed ${rcId} applicable today. sourceTaskId=${mostRecentTaskId} newTaskId=${newTaskId}. userId=${userId}`);
       } catch (error) {
         log(`🛑 Error while processing recurring config ${rcId}`);
         console.error(error);
