@@ -74,10 +74,6 @@ export type EnvironmentConstants = {
   googleRegion: string;
 };
 
-export type CommonConstants = {
-  [key in Environments]: EnvironmentConstants;
-};
-
 // Active Campaign types
 export type AcList = {
   id: string;

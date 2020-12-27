@@ -88,22 +88,18 @@ export default functions
   .region(constants.googleRegion)
   .auth.user()
   .onCreate(async (user) => {
-    try {
-      const { uid, providerData } = user;
+    const { uid, providerData } = user;
 
-      const activeCampaignId = await createContactFromUser(user);
+    const activeCampaignId = await createContactFromUser(user);
 
-      const { providerId } = providerData[0];
-      await addTagToNewUser(activeCampaignId, providerId);
-      await addNewUsertoList(activeCampaignId);
+    const { providerId } = providerData[0];
+    await addTagToNewUser(activeCampaignId, providerId);
+    await addNewUsertoList(activeCampaignId);
 
-      const userPayload = validateUserConfig({
-        userId: uid,
-        activeCampaignId,
-      });
+    const userPayload = validateUserConfig({
+      userId: uid,
+      activeCampaignId,
+    });
 
-      await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);
-    } catch (err) {
-      console.log(err);
-    }
+    await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);
   });
