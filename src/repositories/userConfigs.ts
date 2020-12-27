@@ -7,3 +7,13 @@ export const getUserConfig = async (userId: string): Promise<UserConfig> => {
   const snapshot = await admin.firestore().collection(USER_CONFIGS).doc(userId).get();
   return snapshot.data() as UserConfig;
 };
+
+type WriteResult = admin.firestore.WriteResult;
+
+export const updateUserConfig = async (
+  userId: string,
+  payload: Partial<UserConfig>,
+): Promise<WriteResult> => admin.firestore().collection(USER_CONFIGS).doc(userId).update(payload);
+
+export const deleteUserConfig = async (userId: string): Promise<WriteResult> =>
+  admin.firestore().collection(USER_CONFIGS).doc(userId).delete();

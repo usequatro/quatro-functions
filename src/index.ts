@@ -8,6 +8,7 @@ import admin from 'firebase-admin';
 import slack from './slack/app';
 import createRecurringTasks from './scheduled/createRecurringTasks';
 import trackNewAcUser from './triggers/trackNewAcUser';
+import trackDeleteAcUser from './triggers/trackDeleteAcUser';
 import trackCreateCalendar from './triggers/trackCreateCalendar';
 import trackDeleteCalendar from './triggers/trackDeleteCalendar';
 
@@ -23,6 +24,7 @@ export {
   createRecurringTasks,
   // triggers
   trackNewAcUser,
+  trackDeleteAcUser,
   trackCreateCalendar,
   trackDeleteCalendar,
   // ...

@@ -99,6 +99,7 @@ export default functions
     const userPayload = validateUserConfig({
       userId: uid,
       activeCampaignId,
+      providers: [providerId.replace('.com', '')],
     });
 
     await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);
