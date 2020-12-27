@@ -20,4 +20,4 @@ export {
   createRecurringTasks,
   // triggers
   // ...
-}
+};
