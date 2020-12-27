@@ -19,6 +19,7 @@ import {
 import { addTagToUser, createContact, addContactToList } from '../repositories/activeCampaign';
 import constants from '../constants/common';
 import { USER_CONFIGS } from '../constants/collections';
+import { validateUserConfig } from '../schemas/userConfig';
 
 const createContactFromUser = async (user: UserRecord): Promise<string> => {
   const { email, phoneNumber, displayName } = user;
@@ -96,10 +97,10 @@ export default functions
       await addTagToNewUser(activeCampaignId, providerId);
       await addNewUsertoList(activeCampaignId);
 
-      const userPayload = {
+      const userPayload = validateUserConfig({
         userId: uid,
         activeCampaignId,
-      };
+      });
 
       await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);
     } catch (err) {
