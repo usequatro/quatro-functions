@@ -7,6 +7,7 @@ import admin from 'firebase-admin';
 
 import slack from './slack/app';
 import createRecurringTasks from './scheduled/createRecurringTasks';
+import trackNewAcUser from './triggers/trackNewAcUser';
 
 admin.initializeApp(functions.config().firebase);
 
@@ -19,5 +20,6 @@ export {
   // scheduled
   createRecurringTasks,
   // triggers
+  trackNewAcUser,
   // ...
 };

@@ -71,6 +71,7 @@ export type EnvironmentConstants = {
   env: string;
   acBaseUrl: string;
   acApiKey: string;
+  googleRegion: string;
 };
 
 export type CommonConstants = {
@@ -111,7 +112,7 @@ export type AcTagsResponse = {
 
 export type AcContactFieldValues = {
   field: string | number;
-  value: string | number;
+  value: string;
 };
 
 export type AcFieldValuesPayload = {
