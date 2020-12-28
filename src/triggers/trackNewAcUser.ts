@@ -21,17 +21,21 @@ import constants from '../constants/common';
 import { USER_CONFIGS } from '../constants/collections';
 import { validateUserConfig } from '../schemas/userConfig';
 
+const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) =>
+  email.replace(/@/, '+development@');
+
 const createContactFromUser = async (user: UserRecord): Promise<string> => {
-  const { email, phoneNumber, displayName } = user;
+  const { email = '', phoneNumber, displayName } = user;
 
   const acPayload = {
     contact: {
-      email,
+      email:
+        constants.env === 'development'
+          ? addDevelopmentFlagToAvoidCollisionsBetweenEnvironments(email)
+          : email,
       firstName: displayName,
       phone: phoneNumber,
-      fieldValues: [
-        { field: CALENDARS_FIELD.id, value: '0' },
-      ],
+      fieldValues: [{ field: CALENDARS_FIELD.id, value: '0' }],
     },
   } as AcContactPayload;
 
@@ -39,7 +43,9 @@ const createContactFromUser = async (user: UserRecord): Promise<string> => {
   const activeCampaignId = response.contact?.id;
   if (!activeCampaignId) {
     console.info(JSON.stringify(response));
-    throw new Error(`Active Campaign user not created for email ${user.email}. Contact ID not returned`);
+    throw new Error(
+      `Active Campaign user not created for email ${user.email}. Contact ID not returned`,
+    );
   }
 
   return activeCampaignId;
@@ -101,7 +107,7 @@ export default functions
     const userPayload = validateUserConfig({
       userId: uid,
       activeCampaignId,
-      providers: [providerId.replace('.com', '')],
+      providersSentToActiveCampaign: [providerId],
     });
 
     await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);

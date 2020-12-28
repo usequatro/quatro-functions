@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions';
+import admin from 'firebase-admin';
 
 import {
   AcContactTagPayload,
@@ -24,6 +25,20 @@ const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagRespo
   return addTagToUser(contactTagPayload);
 };
 
+const FIREBASE_AUTH_GOOGLE_PROVIDER_ID = 'google.com';
+
+const getUserHasSignedUpWithGoogleToFirebaseAuth = (userId: string) =>
+  admin
+    .auth()
+    .getUser(userId)
+    .then((userRecord) => {
+      return Boolean(
+        (userRecord.providerData || []).find(
+          (provider) => provider.providerId === FIREBASE_AUTH_GOOGLE_PROVIDER_ID,
+        ),
+      );
+    });
+
 export default functions
   .region(constants.googleRegion)
   .firestore.document(`${CALENDARS}/{calendarId}`)
@@ -35,16 +50,24 @@ export default functions
     if (!userConfig) {
       throw new Error(`User config for user ${userId} not found`);
     }
-    const { activeCampaignId, providers } = userConfig;
+    const { activeCampaignId, providersSentToActiveCampaign } = userConfig;
 
-    // Include google in userConfig providers and add it to the CRM.
     // This will only happen in case the user started using password but added a google account later on.
-    if (provider === 'google' && !providers.includes('google')) {
-      await updateUserConfig(userId, {
-        providers: [...providers, provider],
-      });
-
-      await addGoogleTagToUser(activeCampaignId);
+    // Tag the user as having signed up with Google
+    if (
+      provider === 'google' &&
+      !providersSentToActiveCampaign.includes(FIREBASE_AUTH_GOOGLE_PROVIDER_ID)
+    ) {
+      const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);
+      if (signedUpWithGoogle) {
+        await addGoogleTagToUser(activeCampaignId);
+        await updateUserConfig(userId, {
+          providersSentToActiveCampaign: [
+            ...providersSentToActiveCampaign,
+            FIREBASE_AUTH_GOOGLE_PROVIDER_ID,
+          ],
+        });
+      }
     }
 
     const customFieldPayload: AcFieldValuePayload = {
