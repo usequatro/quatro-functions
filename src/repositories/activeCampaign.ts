@@ -8,7 +8,7 @@ import {
   CUSTOM_FIELD_VALUES_URL,
   CONTACT_TAGS_URL,
 } from '../constants/activeCampaign';
-import { getRequest, postRequest } from '../utils/fetch';
+import { deleteRequest, getRequest, postRequest } from '../utils/fetch';
 import {
   AcListResponse,
   AcCustomFieldResponse,
@@ -39,6 +39,9 @@ export const getAllTags = async (): Promise<AcTagsResponse> =>
 
 export const createContact = async (contact: AcContactPayload): Promise<AcContactResponse> =>
   postRequest(buildUrl(CONTACTS_URL), acHeaders, contact) as Promise<AcContactResponse>;
+
+export const deleteContact = async (id: string): Promise<AcContactResponse> =>
+  deleteRequest(buildUrl(`${CONTACTS_URL}/${id}`), acHeaders) as Promise<AcContactResponse>;
 
 export const addContactToList = async (
   contactList: AcContactListPayload,

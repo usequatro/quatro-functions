@@ -19,7 +19,7 @@ There are 2 Firebase environments.
 - `dev`, for development environments, with Firebase project `quatro-dev-88030`
 - `prod`, with Firebase project `tasket-project`
 
-You can check which one you have active locally by running firebase use. To switch, use firebase use [default|prod]
+You can check which one you have active locally by running `firebase use`. To switch, use `firebase use [dev|prod]`
 
 ## Environment variables
 
@@ -28,6 +28,8 @@ To check what the environment variables are in the cloud, use `firebase function
 Where to get all the env var values from? Ask the team.
 
 ## Deploying
+
+Check before which environment you're deploying with `firebase use`. Then:
 
 - All functions: `npm run deploy` or `firebase deploy --only functions`
 - Only one function: `firebase deploy --only functions:[fname]`
