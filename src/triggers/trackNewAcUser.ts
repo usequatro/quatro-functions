@@ -29,15 +29,17 @@ const createContactFromUser = async (user: UserRecord): Promise<string> => {
       email,
       firstName: displayName,
       phone: phoneNumber,
-      fieldValues: [{ field: CALENDARS_FIELD.id, value: '0' }],
+      fieldValues: [
+        { field: CALENDARS_FIELD.id, value: '0' },
+      ],
     },
   } as AcContactPayload;
 
-  const contactData = await createContact(acPayload);
-  const activeCampaignId = contactData.contact.id;
-
+  const response = await createContact(acPayload);
+  const activeCampaignId = response.contact?.id;
   if (!activeCampaignId) {
-    throw new Error(`Active Campaign user not created for email ${user.email}`);
+    console.info(JSON.stringify(response));
+    throw new Error(`Active Campaign user not created for email ${user.email}. Contact ID not returned`);
   }
 
   return activeCampaignId;

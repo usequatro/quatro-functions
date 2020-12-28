@@ -17,7 +17,11 @@ export default functions
     const calendarsCount = await getUserCalendarsCount(userId);
     const newCount = calendarsCount > 0 ? calendarsCount - 1 : 0;
 
-    const { activeCampaignId } = await getUserConfig(userId);
+    const userConfig = await getUserConfig(userId);
+    if (!userConfig) {
+      throw new Error(`User config for user ${userId} not found`);
+    }
+    const { activeCampaignId } = userConfig;
 
     const customFieldPayload: AcFieldValuePayload = {
       fieldValue: {

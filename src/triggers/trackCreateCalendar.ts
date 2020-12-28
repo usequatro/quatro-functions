@@ -31,7 +31,11 @@ export default functions
     const { userId, provider } = change.data() as CalendarDocument;
 
     const calendarsCount = await getUserCalendarsCount(userId);
-    const { activeCampaignId, providers } = await getUserConfig(userId);
+    const userConfig = await getUserConfig(userId);
+    if (!userConfig) {
+      throw new Error(`User config for user ${userId} not found`);
+    }
+    const { activeCampaignId, providers } = userConfig;
 
     // Include google in userConfig providers and add it to the CRM.
     // This will only happen in case the user started using password but added a google account later on.

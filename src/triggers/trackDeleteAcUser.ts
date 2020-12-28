@@ -11,7 +11,11 @@ export default functions
   .onDelete(async (user) => {
     const { uid } = user;
 
-    const { activeCampaignId } = await getUserConfig(uid);
+    const userConfig = await getUserConfig(uid);
+    if (!userConfig) {
+      throw new Error(`User config for user ${uid} not found`);
+    }
+    const { activeCampaignId } = userConfig;
 
     await deleteContact(activeCampaignId);
     await deleteUserConfig(uid);
