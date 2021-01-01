@@ -10,9 +10,9 @@ import {
 import { addCustomFieldValue, addTagToUser } from '../repositories/activeCampaign';
 import { CALENDARS } from '../constants/collections';
 import { CALENDARS_FIELD, SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
+import REGION from '../constants/region';
 import { getUserCalendarsCount } from '../repositories/calendars';
 import { getUserConfig, updateUserConfig } from '../repositories/userConfigs';
-import constants from '../constants/common';
 
 const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
@@ -40,7 +40,7 @@ const getUserHasSignedUpWithGoogleToFirebaseAuth = (userId: string) =>
     });
 
 export default functions
-  .region(constants.googleRegion)
+  .region(REGION)
   .firestore.document(`${CALENDARS}/{calendarId}`)
   .onCreate(async (change) => {
     const { userId, provider } = change.data() as CalendarDocument;

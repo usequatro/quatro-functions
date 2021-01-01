@@ -25,7 +25,9 @@ You can check which one you have active locally by running `firebase use`. To sw
 
 To check what the environment variables are in the cloud, use `firebase functions:config:get`
 
-Where to get all the env var values from? Ask the team.
+Environment variables aren't tracked in source control or locally. Simply update them in the different environments using `firebase functions:config:set [key]=[value]`. Note the key can be nested, like `activeCampaign.url`.
+
+[Documentation: Firebase Functions Environment Configuration](https://firebase.google.com/docs/functions/config-env)
 
 ## Deploying
 

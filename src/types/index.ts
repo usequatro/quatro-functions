@@ -61,19 +61,6 @@ export type OptionalKeys<T> = {
   [P in keyof T]?: T[P];
 };
 
-// Common constants types
-export enum Environments {
-  DEV_ENVIROMENT = 'quatro-dev-88030',
-  PROD_ENVIRONMENT = 'tasket-project',
-}
-
-export type EnvironmentConstants = {
-  env: string;
-  acBaseUrl: string;
-  acApiKey: string;
-  googleRegion: string;
-};
-
 // Active Campaign types
 export type AcList = {
   id: string;
