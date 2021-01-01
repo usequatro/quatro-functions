@@ -6,10 +6,10 @@ import { CALENDARS } from '../constants/collections';
 import { CALENDARS_FIELD } from '../constants/activeCampaign';
 import { getUserCalendarsCount } from '../repositories/calendars';
 import { getUserConfig } from '../repositories/userConfigs';
-import constants from '../constants/common';
+import REGION from '../constants/region';
 
 export default functions
-  .region(constants.googleRegion)
+  .region(REGION)
   .firestore.document(`${CALENDARS}/{calendarId}`)
   .onDelete(async (change) => {
     const { userId } = change.data() as CalendarDocument;

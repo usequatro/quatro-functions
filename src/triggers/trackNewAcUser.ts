@@ -17,7 +17,8 @@ import {
   SIGNED_PASSWORD_TAG,
 } from '../constants/activeCampaign';
 import { addTagToUser, createContact, addContactToList } from '../repositories/activeCampaign';
-import constants from '../constants/common';
+import REGION from '../constants/region';
+import ENVIRONMENT from '../constants/environment';
 import { USER_CONFIGS } from '../constants/collections';
 import { validateUserConfig } from '../schemas/userConfig';
 
@@ -30,7 +31,7 @@ const createContactFromUser = async (user: UserRecord): Promise<string> => {
   const acPayload = {
     contact: {
       email:
-        constants.env === 'development'
+        ENVIRONMENT === 'dev'
           ? addDevelopmentFlagToAvoidCollisionsBetweenEnvironments(email)
           : email,
       firstName: displayName,
@@ -83,7 +84,7 @@ const addNewUsertoList = async (activeCampaignId: string): Promise<AcContactList
   const contactListPayload: AcContactListPayload = {
     contactList: {
       contact: activeCampaignId,
-      list: constants.env === 'production' ? MAIN_LIST.id : DEVELOPMENT_LIST.id,
+      list: ENVIRONMENT === 'prod' ? MAIN_LIST.id : DEVELOPMENT_LIST.id,
       status: 1,
     },
   };
@@ -93,7 +94,7 @@ const addNewUsertoList = async (activeCampaignId: string): Promise<AcContactList
 
 // @see https://firebase.google.com/docs/functions/auth-events
 export default functions
-  .region(constants.googleRegion)
+  .region(REGION)
   .auth.user()
   .onCreate(async (user) => {
     const { uid, providerData } = user;
