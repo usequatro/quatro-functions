@@ -51,6 +51,10 @@ export type Task = {
   userId?: string;
   recurringConfigId?: string | null;
   source?: TaskSources;
+  calendarBlockCalendarId?: string | null;
+  calendarBlockProviderCalendarId?: string | null;
+  calendarBlockStart?: number | null;
+  calendarBlockEnd?: number | null;
 };
 
 export type User = {
