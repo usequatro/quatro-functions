@@ -1,2 +1,2 @@
-export const USER_CONFIGS = 'userConfigs';
+export const USER_INTERNAL_CONFIGS = 'userInternalConfigs';
 export const CALENDARS = 'calendars';

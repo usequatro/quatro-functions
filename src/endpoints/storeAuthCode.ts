@@ -3,7 +3,7 @@ import { google } from 'googleapis';
 import cors from 'cors';
 
 import REGION from '../constants/region';
-import { setUserConfig } from '../repositories/userConfigs';
+import { setUserInternalConfig } from '../repositories/userInternalConfigs';
 
 // Enable cors requests
 cors({ origin: true });
@@ -55,7 +55,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
     access_token=${tokens.access_token.substr(0, 4)}...`,
   );
 
-  await setUserConfig(context.auth.uid, {
+  await setUserInternalConfig(context.auth.uid, {
     gapiRefreshToken: tokens.refresh_token,
     gapiAccessToken: tokens.access_token,
   });

@@ -2,7 +2,10 @@ import * as functions from 'firebase-functions';
 
 import { deleteContact } from '../repositories/activeCampaign';
 import REGION from '../constants/region';
-import { deleteUserConfig, getUserConfig } from '../repositories/userConfigs';
+import {
+  deleteUserInternalConfig,
+  getUserInternalConfig,
+} from '../repositories/userInternalConfigs';
 
 // @see https://firebase.google.com/docs/functions/auth-events
 export default functions
@@ -12,14 +15,14 @@ export default functions
     console.log(`▶️ ActiveCampaign user deletion ${user.uid} ${user.email}`);
     const { uid } = user;
 
-    const userConfig = await getUserConfig(uid);
-    if (!userConfig) {
-      console.log(`User config not found  for user ${user.uid} ${user.email}`);
+    const userInternalConfig = await getUserInternalConfig(uid);
+    if (!userInternalConfig) {
+      console.log(`User internal config not found  for user ${user.uid} ${user.email}`);
       return;
     }
-    const { activeCampaignId } = userConfig;
+    const { activeCampaignId } = userInternalConfig;
     if (activeCampaignId) {
       await deleteContact(activeCampaignId);
     }
-    await deleteUserConfig(uid);
+    await deleteUserInternalConfig(uid);
   });
