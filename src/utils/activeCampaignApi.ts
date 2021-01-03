@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions';
-import { deleteRequest, getRequest, postRequest } from '../utils/fetch';
+import { deleteRequest, getRequest, postRequest } from './fetch';
 import {
   AcListResponse,
   AcCustomFieldResponse,

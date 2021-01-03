@@ -5,17 +5,18 @@
 import admin from 'firebase-admin';
 import { User } from '../types';
 
-const USERS = 'users';
+const COLLECTION = 'users';
 
-export const findByEmail = async (email: string) : Promise<[string, User]> => {
+export const findByEmail = async (email: string): Promise<[string, User]> => {
   const userRecord = await admin.auth().getUserByEmail(email);
-  return [userRecord.uid, <User> userRecord.toJSON()];
+  return [userRecord.uid, <User>userRecord.toJSON()];
 };
 
-export const findBySlackUserId = async (slackUserId: string) : Promise<[string, User]> => {
+export const findBySlackUserId = async (slackUserId: string): Promise<[string, User]> => {
   const db = admin.firestore();
 
-  const querySnapshot = await db.collection(USERS)
+  const querySnapshot = await db
+    .collection(COLLECTION)
     .where('slackUserId', '==', slackUserId)
     .limit(1)
     .get();
@@ -28,11 +29,11 @@ export const findBySlackUserId = async (slackUserId: string) : Promise<[string, 
   const userId = userQueryDocumentSnapshot.id;
   const userRecord = await admin.auth().getUser(userId);
 
-  return [userId, <User> userRecord.toJSON()];
+  return [userId, <User>userRecord.toJSON()];
 };
 
 export const setSlackUserId = async (userId: string, slackUserId: string | null): Promise<void> => {
-  await admin.firestore().collection(USERS).doc(userId).set({
+  await admin.firestore().collection(COLLECTION).doc(userId).set({
     slackUserId,
-  })
+  });
 };

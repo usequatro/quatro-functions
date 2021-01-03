@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions';
 
-import { deleteContact } from '../repositories/activeCampaign';
+import { deleteContact } from '../utils/activeCampaignApi';
 import REGION from '../constants/region';
 import {
   deleteUserInternalConfig,

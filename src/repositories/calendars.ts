@@ -1,17 +1,18 @@
 import admin from 'firebase-admin';
 
-import { CALENDARS } from '../constants/collections';
 import { CalendarDocument } from '../types';
+
+export const COLLECTION = 'calendars';
 
 export type FirestoreSnapshot = admin.firestore.QuerySnapshot<admin.firestore.DocumentData>;
 
 export const getCalendarsByUserId = (userId: string): Promise<FirestoreSnapshot> =>
-  admin.firestore().collection(CALENDARS).where(userId, '==', userId).get();
+  admin.firestore().collection(COLLECTION).where(userId, '==', userId).get();
 
 export const getCalendarById = async (
   id: string,
 ): Promise<[string, CalendarDocument] | undefined> => {
-  const document = await admin.firestore().collection(CALENDARS).doc(id).get();
+  const document = await admin.firestore().collection(COLLECTION).doc(id).get();
   return document.exists ? [document.id, document.data() as CalendarDocument] : undefined;
 };
 

@@ -1,6 +1,5 @@
 import * as functions from 'firebase-functions';
 import { UserRecord } from 'firebase-functions/lib/providers/auth';
-import admin from 'firebase-admin';
 
 import {
   AcContactListPayload,
@@ -16,11 +15,10 @@ import {
   SIGNED_GOOGLE_TAG,
   SIGNED_PASSWORD_TAG,
 } from '../constants/activeCampaign';
-import { addTagToUser, createContact, addContactToList } from '../repositories/activeCampaign';
+import { addTagToUser, createContact, addContactToList } from '../utils/activeCampaignApi';
 import REGION from '../constants/region';
 import ENVIRONMENT from '../constants/environment';
-import { USER_INTERNAL_CONFIGS } from '../constants/collections';
-import { validateUserInternalConfig } from '../schemas/userInternalConfig';
+import { setUserInternalConfig } from '../repositories/userInternalConfigs';
 
 const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) => {
   const devEmail = email.replace(/@/, '+development@');
@@ -109,11 +107,8 @@ export default functions
     await addTagToNewUser(activeCampaignId, providerId);
     await addNewUsertoList(activeCampaignId);
 
-    const userPayload = validateUserInternalConfig({
-      userId: uid,
+    await setUserInternalConfig(uid, {
       activeCampaignId,
       providersSentToActiveCampaign: [providerId],
     });
-
-    await admin.firestore().collection(USER_INTERNAL_CONFIGS).doc(uid).set(userPayload);
   });

@@ -1,7 +1,6 @@
 import { array, object, string } from 'joi';
 
 export interface UserInternalConfig {
-  userId: string;
   activeCampaignId?: string;
   // We keep a list of providers we syched to avoid posting tags twice or needing to check for that
   providersSentToActiveCampaign?: string[];
@@ -11,18 +10,9 @@ export interface UserInternalConfig {
   gapiAccessToken?: string;
 }
 
-const userInternalConfigSchema = object({
-  userId: string().required(),
-  activeCampaignId: string().required(),
-  providersSentToActiveCampaign: array().items(string()),
+export const userInternalConfigSchema = object({
+  activeCampaignId: string().allow(null),
+  providersSentToActiveCampaign: array().items(string()).default([]),
+  gapiRefreshToken: string().allow(null),
+  gapiAccessToken: string().allow(null),
 });
-
-export const validateUserInternalConfig = (payload: UserInternalConfig): UserInternalConfig => {
-  const { value, error } = userInternalConfigSchema.validate(payload);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return value;
-};

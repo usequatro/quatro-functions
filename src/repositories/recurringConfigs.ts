@@ -5,12 +5,12 @@
 import admin from 'firebase-admin';
 import { RecurringConfig, OptionalKeys } from '../types';
 
-const RECURRING_CONFIGS = 'recurringConfigs'; // collection name
+const COLLECTION = 'recurringConfigs';
 
 export const findAll = async (): Promise<[string, RecurringConfig][]> => {
   const db = admin.firestore();
 
-  const collectionRef = db.collection(RECURRING_CONFIGS);
+  const collectionRef = db.collection(COLLECTION);
   const querySnapshot = await collectionRef.get();
 
   const recurringConfigs = querySnapshot.docs.map((doc): [string, RecurringConfig] => [
@@ -24,7 +24,7 @@ export const findAll = async (): Promise<[string, RecurringConfig][]> => {
 export const findById = async (id: string): Promise<RecurringConfig | undefined> => {
   const db = admin.firestore();
 
-  const docRef = db.collection(RECURRING_CONFIGS).doc(id);
+  const docRef = db.collection(COLLECTION).doc(id);
   const docSnapshot = await docRef.get();
 
   return docSnapshot.exists ? <RecurringConfig>docSnapshot.data() : undefined;
@@ -41,7 +41,7 @@ export const create = async (
 
   const db = admin.firestore();
 
-  const docRef = await db.collection(RECURRING_CONFIGS).add(finalEntity);
+  const docRef = await db.collection(COLLECTION).add(finalEntity);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data() as RecurringConfig];
 };
@@ -52,7 +52,7 @@ export const update = async (
 ): Promise<void> => {
   const db = admin.firestore();
 
-  const docRef = await db.collection(RECURRING_CONFIGS).doc(rcId);
+  const docRef = await db.collection(COLLECTION).doc(rcId);
   await docRef.set(updates, { merge: true });
   return;
 };
