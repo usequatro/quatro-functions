@@ -74,3 +74,6 @@ typings/
 node_modules/
 
 .vscode
+
+# For Firebase emulator of functions
+.runtimeconfig.json

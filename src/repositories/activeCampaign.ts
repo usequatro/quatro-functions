@@ -14,7 +14,13 @@ import {
   AcContactTagResponse,
 } from '../types';
 
-const { url, key } = functions.config().activecampaign;
+const { url, key } = functions.config().activecampaign || {};
+if (!url) {
+  throw new Error('No env var activecampaign.url');
+}
+if (!key) {
+  throw new Error('No env var activecampaign.key');
+}
 
 const buildUrl = (path: string): string => `${url}/api/3${path}`;
 const acHeaders: { [key: string]: string } = {

@@ -27,12 +27,12 @@ import { isAfter } from 'date-fns';
 
 const log = (message: string) => console.log(`[createRecurringTasks] ${message}`);
 
-export const applies = (recurringConfig:RecurringConfig, taskScheduledStart: number, now:number) : boolean => {
-  const {
-    unit,
-    amount,
-    activeWeekdays,
-  } = recurringConfig;
+export const applies = (
+  recurringConfig: RecurringConfig,
+  taskScheduledStart: number,
+  now: number,
+): boolean => {
+  const { unit, amount, activeWeekdays } = recurringConfig;
 
   if (!unit || !amount) {
     log(`⚠️ Missing arguments for recurrence`);
@@ -57,13 +57,13 @@ export const applies = (recurringConfig:RecurringConfig, taskScheduledStart: num
       }
 
       return (
-        (isMonday(now) && activeWeekdays[DaysOfWeek.Monday])
-        || (isTuesday(now) && activeWeekdays[DaysOfWeek.Tuesday])
-        || (isWednesday(now) && activeWeekdays[DaysOfWeek.Wednesday])
-        || (isThursday(now) && activeWeekdays[DaysOfWeek.Thursday])
-        || (isFriday(now) && activeWeekdays[DaysOfWeek.Friday])
-        || (isSaturday(now) && activeWeekdays[DaysOfWeek.Saturday])
-        || (isSunday(now) && activeWeekdays[DaysOfWeek.Sunday])
+        (isMonday(now) && activeWeekdays[DaysOfWeek.Monday]) ||
+        (isTuesday(now) && activeWeekdays[DaysOfWeek.Tuesday]) ||
+        (isWednesday(now) && activeWeekdays[DaysOfWeek.Wednesday]) ||
+        (isThursday(now) && activeWeekdays[DaysOfWeek.Thursday]) ||
+        (isFriday(now) && activeWeekdays[DaysOfWeek.Friday]) ||
+        (isSaturday(now) && activeWeekdays[DaysOfWeek.Saturday]) ||
+        (isSunday(now) && activeWeekdays[DaysOfWeek.Sunday])
       );
     }
     case DurationUnits.Month: {
@@ -89,9 +89,8 @@ export const applies = (recurringConfig:RecurringConfig, taskScheduledStart: num
   }
 };
 
-const alreadyRunToday = (recurringConfig:RecurringConfig, now:number) => (
-  recurringConfig.lastRunDate && isSameDay(now, recurringConfig.lastRunDate)
-);
+const alreadyRunToday = (recurringConfig: RecurringConfig, now: number) =>
+  recurringConfig.lastRunDate && isSameDay(now, recurringConfig.lastRunDate);
 
 /**
  * Scheduled task for creating recurring tasks every morning.
@@ -107,55 +106,70 @@ export default functions.pubsub
     const now = Date.now();
     const createdTaskIds = [];
 
-    const configsExcludedAlreadyRun = recurringConfigsResult.filter(([, recurringConfig]) =>
-      !alreadyRunToday(recurringConfig, now)
+    const configsExcludedAlreadyRun = recurringConfigsResult.filter(
+      ([, recurringConfig]) => !alreadyRunToday(recurringConfig, now),
     );
 
     for (const [rcId, recurringConfig] of configsExcludedAlreadyRun) {
       try {
         const { mostRecentTaskId, userId = '' } = recurringConfig;
         if (!mostRecentTaskId) {
-          log(`🛑 Skipped ${rcId} that was applicable today because no taskId found. userId=${userId}`);
+          log(
+            `🛑 Skipped ${rcId} that was applicable today because no taskId found. userId=${userId}`,
+          );
           continue;
         }
 
-        const task = await findById(mostRecentTaskId)
-          .catch((error) => { // resolve the promise, so we return `undefined` instead of throwing
-            console.error(error);
-          });
+        const task = await findById(mostRecentTaskId);
         if (!task) {
           // @todo: consider deleting the recurring config here, since it's invalid
-          log(`👻 Skipped  ${rcId} because most recent task ${mostRecentTaskId} wasn't found. userId=${userId}`);
+          log(
+            `👻 Skipped  ${rcId} because most recent task ${mostRecentTaskId} wasn't found. userId=${userId}`,
+          );
           continue;
         }
 
         if (!task.scheduledStart) {
-          log(`🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}. userId=${userId}`);
+          log(
+            `🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}. userId=${userId}`,
+          );
           continue;
         }
 
         if (!applies(recurringConfig, task.scheduledStart, now)) {
-          log(`🔁 Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(recurringConfig)}. userId=${userId}`);
+          log(
+            `🔁 Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(
+              recurringConfig,
+            )}. userId=${userId}`,
+          );
           continue;
         }
 
         if (!task.completed) {
-          log(`☑️ Skipped ${rcId} because its most recent task ${mostRecentTaskId} isn't completed. userId=${userId}`);
+          log(
+            `☑️ Skipped ${rcId} because its most recent task ${mostRecentTaskId} isn't completed. userId=${userId}`,
+          );
           continue;
         }
 
         const { userId: taskUserId } = task;
         if (!taskUserId) {
-          log(`🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}. userId=${userId}`);
+          log(
+            `🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}. userId=${userId}`,
+          );
           continue;
         }
         if (taskUserId !== userId) {
-          log(`🛑 Bad data with ${rcId}, task userId ${taskUserId} doesn't match config userId. userId=${userId}`);
+          log(
+            `🛑 Bad data with ${rcId}, task userId ${taskUserId} doesn't match config userId. userId=${userId}`,
+          );
           continue;
         }
 
         if (task.created && isToday(task.created)) {
-          log(`📅 Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`);
+          log(
+            `📅 Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`,
+          );
         }
 
         const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
@@ -179,12 +193,14 @@ export default functions.pubsub
           // update lastRunDate so that we don't create duplicates for the same day
           lastRunDate: now,
           // update taskId so that future tasks are cloned from latest one
-          mostRecentTaskId: newTaskId
+          mostRecentTaskId: newTaskId,
         });
 
         createdTaskIds.push(newTaskId);
 
-        log(`✅ Processed ${rcId} applicable today. sourceTaskId=${mostRecentTaskId} newTaskId=${newTaskId}. userId=${userId}`);
+        log(
+          `✅ Processed ${rcId} applicable today. sourceTaskId=${mostRecentTaskId} newTaskId=${newTaskId}. userId=${userId}`,
+        );
       } catch (error) {
         log(`🛑 Error while processing recurring config ${rcId}`);
         console.error(error);
@@ -192,7 +208,11 @@ export default functions.pubsub
     }
 
     if (createdTaskIds.length > 0) {
-      log(`ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${(Date.now() - now)} milliseconds`);
+      log(
+        `ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${
+          Date.now() - now
+        } milliseconds`,
+      );
     }
     return null;
   });

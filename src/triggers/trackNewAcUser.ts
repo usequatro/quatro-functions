@@ -22,8 +22,11 @@ import ENVIRONMENT from '../constants/environment';
 import { USER_CONFIGS } from '../constants/collections';
 import { validateUserConfig } from '../schemas/userConfig';
 
-const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) =>
-  email.replace(/@/, '+development@');
+const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) => {
+  const devEmail = email.replace(/@/, '+development@');
+  console.log(`▶️ Dev mode email ${devEmail}`);
+  return devEmail;
+};
 
 const createContactFromUser = async (user: UserRecord): Promise<string> => {
   const { email = '', phoneNumber, displayName } = user;
@@ -97,6 +100,7 @@ export default functions
   .region(REGION)
   .auth.user()
   .onCreate(async (user) => {
+    console.log(`▶️ ActiveCampaign user creation ${user.uid} ${user.email}`);
     const { uid, providerData } = user;
 
     const activeCampaignId = await createContactFromUser(user);
