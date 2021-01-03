@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions';
 import { google, Auth } from 'googleapis';
-import { getUserConfig, setUserConfig } from '../repositories/userConfigs';
+import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 
 const { clientid, clientsecret } = functions.config().googleapis || {};
 if (!clientid) {
@@ -26,7 +26,7 @@ export default async function createGoogleAuth(userId: string): Promise<Auth.OAu
   const oauth2Client = new google.auth.OAuth2(clientid, clientsecret, redirectUri);
 
   // Pull saved tokens for backend usage
-  const { gapiAccessToken, gapiRefreshToken } = (await getUserConfig(userId)) || {};
+  const { gapiAccessToken, gapiRefreshToken } = (await getUserInternalConfig(userId)) || {};
 
   if (!gapiAccessToken) {
     throw new Error(`User ${userId} doesn't have refresh token for Google Calendar offline access`);
@@ -52,7 +52,7 @@ export default async function createGoogleAuth(userId: string): Promise<Auth.OAu
           tokens.access_token ? `${tokens.access_token.substr(0, 4)}...` : '-'
         }`,
       );
-      setUserConfig(userId, { gapiAccessToken: tokens.access_token });
+      setUserInternalConfig(userId, { gapiAccessToken: tokens.access_token });
     }
   });
 

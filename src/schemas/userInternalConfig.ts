@@ -1,6 +1,6 @@
 import { array, object, string } from 'joi';
 
-export interface UserConfig {
+export interface UserInternalConfig {
   userId: string;
   activeCampaignId?: string;
   // We keep a list of providers we syched to avoid posting tags twice or needing to check for that
@@ -11,14 +11,14 @@ export interface UserConfig {
   gapiAccessToken?: string;
 }
 
-export const userConfigSchema = object({
+const userInternalConfigSchema = object({
   userId: string().required(),
   activeCampaignId: string().required(),
   providersSentToActiveCampaign: array().items(string()),
 });
 
-export const validateUserConfig = (payload: UserConfig): UserConfig => {
-  const { value, error } = userConfigSchema.validate(payload);
+export const validateUserInternalConfig = (payload: UserInternalConfig): UserInternalConfig => {
+  const { value, error } = userInternalConfigSchema.validate(payload);
 
   if (error) {
     throw new Error(error.message);

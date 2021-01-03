@@ -19,8 +19,8 @@ import {
 import { addTagToUser, createContact, addContactToList } from '../repositories/activeCampaign';
 import REGION from '../constants/region';
 import ENVIRONMENT from '../constants/environment';
-import { USER_CONFIGS } from '../constants/collections';
-import { validateUserConfig } from '../schemas/userConfig';
+import { USER_INTERNAL_CONFIGS } from '../constants/collections';
+import { validateUserInternalConfig } from '../schemas/userInternalConfig';
 
 const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) => {
   const devEmail = email.replace(/@/, '+development@');
@@ -109,11 +109,11 @@ export default functions
     await addTagToNewUser(activeCampaignId, providerId);
     await addNewUsertoList(activeCampaignId);
 
-    const userPayload = validateUserConfig({
+    const userPayload = validateUserInternalConfig({
       userId: uid,
       activeCampaignId,
       providersSentToActiveCampaign: [providerId],
     });
 
-    await admin.firestore().collection(USER_CONFIGS).doc(uid).set(userPayload);
+    await admin.firestore().collection(USER_INTERNAL_CONFIGS).doc(uid).set(userPayload);
   });

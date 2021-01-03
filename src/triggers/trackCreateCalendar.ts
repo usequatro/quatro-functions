@@ -12,7 +12,7 @@ import { CALENDARS } from '../constants/collections';
 import { CALENDARS_FIELD, SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
 import { getUserCalendarsCount } from '../repositories/calendars';
-import { getUserConfig, setUserConfig } from '../repositories/userConfigs';
+import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 
 const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
@@ -46,11 +46,11 @@ export default functions
     const { userId, provider } = change.data() as CalendarDocument;
 
     const calendarsCount = await getUserCalendarsCount(userId);
-    const userConfig = await getUserConfig(userId);
-    if (!userConfig) {
-      throw new Error(`User config for user ${userId} not found`);
+    const userInternalConfig = await getUserInternalConfig(userId);
+    if (!userInternalConfig) {
+      throw new Error(`User internal config for user ${userId} not found`);
     }
-    const { activeCampaignId, providersSentToActiveCampaign = [] } = userConfig;
+    const { activeCampaignId, providersSentToActiveCampaign = [] } = userInternalConfig;
 
     if (!activeCampaignId) {
       throw new Error(`User ${userId} doesn't have an ActiveCampaign ID`);
@@ -65,7 +65,7 @@ export default functions
       const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);
       if (signedUpWithGoogle) {
         await addGoogleTagToUser(activeCampaignId);
-        await setUserConfig(userId, {
+        await setUserInternalConfig(userId, {
           providersSentToActiveCampaign: [
             ...providersSentToActiveCampaign,
             FIREBASE_AUTH_GOOGLE_PROVIDER_ID,
