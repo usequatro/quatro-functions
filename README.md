@@ -29,7 +29,18 @@ Environment variables aren't tracked in source control or locally. Simply update
 
 [Documentation: Firebase Functions Environment Configuration](https://firebase.google.com/docs/functions/config-env)
 
-Download the environment variables for the Firebase Emulator with `firebase functions:config:get > .runtimeconfig.json`. Then run `export GOOGLE_APPLICATION_CREDENTIALS="path/to/.runtimeconfig.json"`. This is good for emulator, but open a new terminal for deploying.
+## Emulator
+
+Initial setup:
+
+1. Download the environment variables for the Firebase Emulator with `firebase functions:config:get > .runtimeconfig.json`. Then run `export GOOGLE_APPLICATION_CREDENTIALS="path/to/.runtimeconfig.json"`. This is good for emulator, but open a new terminal for deploying so it doesn't use them.
+
+Instructions:
+
+1. On the `quatro-web-client` repository, run `firebase emulators:start`
+1. On a different terminal, on this repository, run `npm run build-watch`
+
+Note that the emulator is fairly recent and there are some issues with it. Notably, the callable function `storeAuthCode` doesn't work as expected there, so you might need to copy tokens from the real dev environment for the Google Calendar sync to work.
 
 ## Deploying
 
