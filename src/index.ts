@@ -5,7 +5,7 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
-import slack from './slack/app';
+// import slack from './slack/app';
 import storeAuthCode from './endpoints/storeAuthCode';
 import createRecurringTasks from './scheduled/createRecurringTasks';
 import trackNewAcUser from './triggers/trackNewAcUser';
@@ -21,7 +21,7 @@ admin.initializeApp(functions.config().firebase);
 
 export {
   // endpoints
-  slack,
+  // slack,
   storeAuthCode,
   // scheduled
   createRecurringTasks,
