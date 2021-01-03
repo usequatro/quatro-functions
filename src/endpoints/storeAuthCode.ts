@@ -4,6 +4,7 @@ import cors from 'cors';
 
 import REGION from '../constants/region';
 import { setUserInternalConfig } from '../repositories/userInternalConfigs';
+import { setUserExternalConfig } from '../repositories/userExternalConfigs';
 
 // Enable cors requests
 cors({ origin: true });
@@ -58,6 +59,9 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
   await setUserInternalConfig(context.auth.uid, {
     gapiRefreshToken: tokens.refresh_token,
     gapiAccessToken: tokens.access_token,
+  });
+  await setUserExternalConfig(context.auth.uid, {
+    gapiCalendarOfflineAccess: true,
   });
 
   return {};

@@ -1,12 +1,13 @@
 import admin from 'firebase-admin';
 
-import { USER_INTERNAL_CONFIGS } from '../constants/collections';
-import { UserInternalConfig } from '../schemas/userInternalConfig';
+import { UserInternalConfig, userInternalConfigSchema } from '../schemas/userInternalConfig';
+
+const COLLECTION = 'userInternalConfigs';
 
 export const getUserInternalConfig = async (
   userId: string,
 ): Promise<UserInternalConfig | undefined> => {
-  const snapshot = await admin.firestore().collection(USER_INTERNAL_CONFIGS).doc(userId).get();
+  const snapshot = await admin.firestore().collection(COLLECTION).doc(userId).get();
   return snapshot.exists ? (snapshot.data() as UserInternalConfig) : undefined;
 };
 
@@ -15,8 +16,17 @@ type WriteResult = admin.firestore.WriteResult;
 export const setUserInternalConfig = async (
   userId: string,
   payload: Partial<UserInternalConfig>,
-): Promise<WriteResult> =>
-  admin.firestore().collection(USER_INTERNAL_CONFIGS).doc(userId).set(payload, { merge: true });
+): Promise<WriteResult> => {
+  const validatedPayload = await userInternalConfigSchema.validateAsync(payload, {
+    stripUnknown: true,
+    noDefaults: true,
+  });
+  return admin
+    .firestore()
+    .collection(COLLECTION)
+    .doc(userId)
+    .set(validatedPayload, { merge: true });
+};
 
 export const deleteUserInternalConfig = async (userId: string): Promise<WriteResult> =>
-  admin.firestore().collection(USER_INTERNAL_CONFIGS).doc(userId).delete();
+  admin.firestore().collection(COLLECTION).doc(userId).delete();

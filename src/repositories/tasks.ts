@@ -5,7 +5,7 @@
 import admin from 'firebase-admin';
 import { Task } from '../types';
 
-const TASKS = 'tasks'; // collection name
+const COLLECTION = 'tasks';
 
 const KEY_DEFAULTS = {
   blockedBy: [],
@@ -24,7 +24,7 @@ const KEY_DEFAULTS = {
 export const findById = async (id: string): Promise<Task | undefined> => {
   const db = admin.firestore();
 
-  const docRef = db.collection(TASKS).doc(id);
+  const docRef = db.collection(COLLECTION).doc(id);
   const docSnapshot = await docRef.get();
 
   return docSnapshot.exists ? <Task>docSnapshot.data() : undefined;
@@ -36,7 +36,7 @@ export const findLastByRecurringConfigId = async (
   const db = admin.firestore();
 
   const query = db
-    .collection(TASKS)
+    .collection(COLLECTION)
     .where('recurringConfigId', '==', recurringConfigId)
     .orderBy('created', 'desc')
     .limit(1);
@@ -57,13 +57,13 @@ export const create = async (userId: string, task: Task): Promise<[string, Task]
 
   const db = admin.firestore();
 
-  const docRef = await db.collection(TASKS).add(finalTask);
+  const docRef = await db.collection(COLLECTION).add(finalTask);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data() as Task];
 };
 
 export const update = async (id: string, task: Partial<Task>): Promise<undefined> => {
   const db = admin.firestore();
-  await db.collection(TASKS).doc(id).update(task);
+  await db.collection(COLLECTION).doc(id).update(task);
   return;
 };

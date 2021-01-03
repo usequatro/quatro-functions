@@ -1,16 +1,18 @@
 import * as functions from 'firebase-functions';
 
 import { CalendarDocument } from '../types';
-import { addCustomFieldValue } from '../repositories/activeCampaign';
-import { CALENDARS } from '../constants/collections';
+import { addCustomFieldValue } from '../utils/activeCampaignApi';
 import { CALENDARS_FIELD } from '../constants/activeCampaign';
-import { getUserCalendarsCount } from '../repositories/calendars';
+import {
+  getUserCalendarsCount,
+  COLLECTION as CALENDARS_COLLECTION,
+} from '../repositories/calendars';
 import { getUserInternalConfig } from '../repositories/userInternalConfigs';
 import REGION from '../constants/region';
 
 export default functions
   .region(REGION)
-  .firestore.document(`${CALENDARS}/{calendarId}`)
+  .firestore.document(`${CALENDARS_COLLECTION}/{calendarId}`)
   .onDelete(async (change) => {
     const { userId } = change.data() as CalendarDocument;
 
