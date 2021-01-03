@@ -29,6 +29,8 @@ Environment variables aren't tracked in source control or locally. Simply update
 
 [Documentation: Firebase Functions Environment Configuration](https://firebase.google.com/docs/functions/config-env)
 
+Download the environment variables for the Firebase Emulator with `firebase functions:config:get > .runtimeconfig.json`. Then run `export GOOGLE_APPLICATION_CREDENTIALS="path/to/.runtimeconfig.json"`. This is good for emulator, but open a new terminal for deploying.
+
 ## Deploying
 
 Check before which environment you're deploying with `firebase use`. Then:

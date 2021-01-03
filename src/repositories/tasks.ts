@@ -3,7 +3,6 @@
  */
 
 import admin from 'firebase-admin';
-import HttpError from '../HttpError';
 import { Task } from '../types';
 
 const TASKS = 'tasks'; // collection name
@@ -22,36 +21,34 @@ const KEY_DEFAULTS = {
   recurringConfigId: null,
 };
 
-export const findById = async (id: string) : Promise<Task> => {
+export const findById = async (id: string): Promise<Task | undefined> => {
   const db = admin.firestore();
 
   const docRef = db.collection(TASKS).doc(id);
   const docSnapshot = await docRef.get();
 
-  if (docSnapshot.exists) {
-    const task = <Task>docSnapshot.data();
-    return task;
-  }
-
-  throw new HttpError(404, 'Task not found');
+  return docSnapshot.exists ? <Task>docSnapshot.data() : undefined;
 };
 
-export const findLastByRecurringConfigId = async (recurringConfigId: string) : Promise<[string, Task]|[null, null]> => {
+export const findLastByRecurringConfigId = async (
+  recurringConfigId: string,
+): Promise<[string, Task] | [null, null]> => {
   const db = admin.firestore();
 
-  const query = db.collection(TASKS)
+  const query = db
+    .collection(TASKS)
     .where('recurringConfigId', '==', recurringConfigId)
     .orderBy('created', 'desc')
     .limit(1);
   const querySnapshot = await query.get();
 
   return querySnapshot.docs.length > 0
-    ? [querySnapshot.docs[0].id, <Task> querySnapshot.docs[0].data()]
+    ? [querySnapshot.docs[0].id, <Task>querySnapshot.docs[0].data()]
     : [null, null];
 };
 
-export const create = async (userId: string, task: Task) : Promise<[string, Task]> => {
-  const finalTask : Task = {
+export const create = async (userId: string, task: Task): Promise<[string, Task]> => {
+  const finalTask: Task = {
     ...KEY_DEFAULTS,
     ...task,
     created: Date.now(),
@@ -63,4 +60,10 @@ export const create = async (userId: string, task: Task) : Promise<[string, Task
   const docRef = await db.collection(TASKS).add(finalTask);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data() as Task];
+};
+
+export const update = async (id: string, task: Partial<Task>): Promise<undefined> => {
+  const db = admin.firestore();
+  await db.collection(TASKS).doc(id).update(task);
+  return;
 };

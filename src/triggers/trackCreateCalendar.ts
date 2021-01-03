@@ -12,7 +12,7 @@ import { CALENDARS } from '../constants/collections';
 import { CALENDARS_FIELD, SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
 import { getUserCalendarsCount } from '../repositories/calendars';
-import { getUserConfig, updateUserConfig } from '../repositories/userConfigs';
+import { getUserConfig, setUserConfig } from '../repositories/userConfigs';
 
 const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
@@ -50,7 +50,11 @@ export default functions
     if (!userConfig) {
       throw new Error(`User config for user ${userId} not found`);
     }
-    const { activeCampaignId, providersSentToActiveCampaign } = userConfig;
+    const { activeCampaignId, providersSentToActiveCampaign = [] } = userConfig;
+
+    if (!activeCampaignId) {
+      throw new Error(`User ${userId} doesn't have an ActiveCampaign ID`);
+    }
 
     // This will only happen in case the user started using password but added a google account later on.
     // Tag the user as having signed up with Google
@@ -61,7 +65,7 @@ export default functions
       const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);
       if (signedUpWithGoogle) {
         await addGoogleTagToUser(activeCampaignId);
-        await updateUserConfig(userId, {
+        await setUserConfig(userId, {
           providersSentToActiveCampaign: [
             ...providersSentToActiveCampaign,
             FIREBASE_AUTH_GOOGLE_PROVIDER_ID,

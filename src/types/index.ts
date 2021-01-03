@@ -52,7 +52,7 @@ export type Task = {
   recurringConfigId?: string | null;
   source?: TaskSources;
   calendarBlockCalendarId?: string | null;
-  calendarBlockProviderCalendarId?: string | null;
+  calendarBlockProviderEventId?: string | null;
   calendarBlockStart?: number | null;
   calendarBlockEnd?: number | null;
 };
@@ -166,5 +166,6 @@ export type AcContactTagResponse = {
 export type CalendarDocument = {
   userId: string;
   provider: string;
+  providerCalendarId: string;
   providerUserEmail: string;
 };
