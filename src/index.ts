@@ -7,6 +7,7 @@ import admin from 'firebase-admin';
 
 // import slack from './slack/app';
 import notifyGoogleCalendarChange from './https/notifyGoogleCalendarChange';
+import processProviderUnlink from './callable/processProviderUnlink';
 import storeAuthCode from './callable/storeAuthCode';
 import createRecurringTasks from './scheduled/createRecurringTasks';
 import renewGoogleCalendarWatchers from './scheduled/renewGoogleCalendarWatchers';
@@ -28,6 +29,7 @@ export {
   notifyGoogleCalendarChange,
   // slack,
   // callable
+  processProviderUnlink,
   storeAuthCode,
   // scheduled
   createRecurringTasks,
