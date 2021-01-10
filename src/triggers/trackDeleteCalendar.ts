@@ -23,21 +23,21 @@ export default functions
     if (!userInternalConfig) {
       throw new Error(`User internal config for user ${userId} not found`);
     }
-    const { activeCampaignId } = userInternalConfig;
+    const { activeCampaignContactId } = userInternalConfig;
 
-    if (!activeCampaignId) {
+    if (!activeCampaignContactId) {
       throw new Error(`User ${userId} doesn't have an ActiveCampaign ID`);
     }
 
     await setCustomFieldValue({
       fieldValue: {
-        contact: activeCampaignId,
+        contact: activeCampaignContactId,
         field: CALENDARS_FIELD.id,
         value: `${newCount}`,
       },
     });
     functions.logger.info('Updated ActiveCampaign contact with calendar count', {
-      activeCampaignId,
+      activeCampaignContactId,
       userId,
       newCount,
     });

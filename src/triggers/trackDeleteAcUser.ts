@@ -22,13 +22,13 @@ export default functions
       });
       return;
     }
-    const { activeCampaignId } = userInternalConfig;
-    if (activeCampaignId) {
-      await deleteContact(activeCampaignId);
+    const { activeCampaignContactId } = userInternalConfig;
+    if (activeCampaignContactId) {
+      await deleteContact(activeCampaignContactId);
       functions.logger.info('Deleted ActiveCampaign contact for user', {
         userId: user.uid,
         userEmail: user.email,
-        activeCampaignId,
+        activeCampaignContactId,
       });
     } else {
       functions.logger.info('Skipping because no ActiveCampaign contact ID', {
