@@ -49,3 +49,7 @@ Check before which environment you're deploying with `firebase use`. Then:
 - All functions: `npm run deploy` or `firebase deploy --only functions`
 - Only one function: `firebase deploy --only functions:[fname]`
 - Multiple functions: `firebase deploy --only functions:[fname1],functions:[fname2]`
+
+## Logging
+
+We use the Firebase Functions Logger ([documentation](https://firebase.google.com/docs/functions/writing-and-viewing-logs), [API reference](https://firebase.google.com/docs/reference/functions/logger_)).

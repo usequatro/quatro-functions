@@ -41,17 +41,18 @@ export default async function createGoogleAuth(userId: string): Promise<Auth.OAu
   // Listen to token changes so we can keep the access token up to date
   oauth2Client.on('tokens', (tokens) => {
     if (tokens.refresh_token) {
-      // store the refresh_token in my database!
-      console.log(
-        `Refresh token changed for user ${userId}: ${tokens.refresh_token.substr(0, 4)}...`,
-      );
+      // store the refresh_token in my database
+      functions.logger.info('Google APIs refresh token changed', {
+        userId,
+        newRefreshToken: `${tokens.refresh_token.substr(0, 4)}...`,
+      });
+      setUserInternalConfig(userId, { gapiRefreshToken: tokens.refresh_token });
     }
     if (tokens.access_token) {
-      console.log(
-        `Access token changed for user ${userId}: ${
-          tokens.access_token ? `${tokens.access_token.substr(0, 4)}...` : '-'
-        }`,
-      );
+      functions.logger.info('Google APIs access token changed', {
+        userId,
+        newAccessToken: `${tokens.access_token.substr(0, 4)}...`,
+      });
       setUserInternalConfig(userId, { gapiAccessToken: tokens.access_token });
     }
   });

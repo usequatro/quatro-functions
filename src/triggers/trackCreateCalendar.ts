@@ -1,22 +1,18 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
-import {
-  AcContactTagPayload,
-  AcContactTagResponse,
-  AcFieldValuePayload,
-  CalendarDocument,
-} from '../types';
-import { addCustomFieldValue, addTagToUser } from '../utils/activeCampaignApi';
+import { AcContactTagPayload, AcContactTagResponse, AcFieldValuePayload } from '../types';
+import { setCustomFieldValue, addTagToContact } from '../utils/activeCampaignApi';
 import { CALENDARS_FIELD, SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
 import {
-  getUserCalendarsCount,
+  findUserCalendarsCount,
   COLLECTION as CALENDARS_COLLECTION,
 } from '../repositories/calendars';
+import { Calendar } from '../schemas/calendar';
 import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 
-const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagResponse> => {
+const addGoogleTagToContact = (activeCampaignId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
     contactTag: {
       contact: activeCampaignId,
@@ -24,7 +20,7 @@ const addGoogleTagToUser = (activeCampaignId: string): Promise<AcContactTagRespo
     },
   };
 
-  return addTagToUser(contactTagPayload);
+  return addTagToContact(contactTagPayload);
 };
 
 const FIREBASE_AUTH_GOOGLE_PROVIDER_ID = 'google.com';
@@ -45,9 +41,9 @@ export default functions
   .region(REGION)
   .firestore.document(`${CALENDARS_COLLECTION}/{calendarId}`)
   .onCreate(async (change) => {
-    const { userId, provider } = change.data() as CalendarDocument;
+    const { userId, provider } = change.data() as Calendar;
 
-    const calendarsCount = await getUserCalendarsCount(userId);
+    const calendarsCount = await findUserCalendarsCount(userId);
     const userInternalConfig = await getUserInternalConfig(userId);
     if (!userInternalConfig) {
       throw new Error(`User internal config for user ${userId} not found`);
@@ -66,23 +62,32 @@ export default functions
     ) {
       const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);
       if (signedUpWithGoogle) {
-        await addGoogleTagToUser(activeCampaignId);
+        await addGoogleTagToContact(activeCampaignId);
         await setUserInternalConfig(userId, {
           providersSentToActiveCampaign: [
             ...providersSentToActiveCampaign,
             FIREBASE_AUTH_GOOGLE_PROVIDER_ID,
           ],
         });
+
+        functions.logger.info('Added Google Tag to ActiveCampaign conctact', {
+          activeCampaignId,
+          userId,
+        });
       }
     }
 
-    const customFieldPayload: AcFieldValuePayload = {
+    const newCount = `${calendarsCount + 1}`;
+    await setCustomFieldValue({
       fieldValue: {
         contact: activeCampaignId,
         field: CALENDARS_FIELD.id,
-        value: `${calendarsCount + 1}`,
+        value: newCount,
       },
-    };
-
-    await addCustomFieldValue(customFieldPayload);
+    });
+    functions.logger.info('Updated ActiveCampaign contact with calendar count', {
+      activeCampaignId,
+      userId,
+      newCount,
+    });
   });

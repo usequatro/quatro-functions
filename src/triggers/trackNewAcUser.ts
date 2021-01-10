@@ -20,21 +20,18 @@ import REGION from '../constants/region';
 import ENVIRONMENT from '../constants/environment';
 import { setUserInternalConfig } from '../repositories/userInternalConfigs';
 
-const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) => {
-  const devEmail = email.replace(/@/, '+development@');
-  console.log(`▶️ Dev mode email ${devEmail}`);
-  return devEmail;
-};
+const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) =>
+  email.replace(/@/, '+development@');
 
-const createContactFromUser = async (user: UserRecord): Promise<string> => {
+const createContactFromUser = async (user: UserRecord): Promise<[string, string]> => {
   const { email = '', phoneNumber, displayName } = user;
+
+  const activeCampaignContactEmail =
+    ENVIRONMENT === 'dev' ? addDevelopmentFlagToAvoidCollisionsBetweenEnvironments(email) : email;
 
   const acPayload = {
     contact: {
-      email:
-        ENVIRONMENT === 'dev'
-          ? addDevelopmentFlagToAvoidCollisionsBetweenEnvironments(email)
-          : email,
+      email: activeCampaignContactEmail,
       firstName: displayName,
       phone: phoneNumber,
       fieldValues: [{ field: CALENDARS_FIELD.id, value: '0' }],
@@ -50,7 +47,7 @@ const createContactFromUser = async (user: UserRecord): Promise<string> => {
     );
   }
 
-  return activeCampaignId;
+  return [activeCampaignId, activeCampaignContactEmail];
 };
 
 const GOOGLE_PROVIDER = 'google.com';
@@ -93,15 +90,14 @@ const addNewUsertoList = async (activeCampaignId: string): Promise<AcContactList
   return addContactToList(contactListPayload);
 };
 
-// @see https://firebase.google.com/docs/functions/auth-events
+// @link https://firebase.google.com/docs/functions/auth-events
 export default functions
   .region(REGION)
   .auth.user()
   .onCreate(async (user) => {
-    console.log(`▶️ ActiveCampaign user creation ${user.uid} ${user.email}`);
     const { uid, providerData } = user;
 
-    const activeCampaignId = await createContactFromUser(user);
+    const [activeCampaignId, activeCampaignContactEmail] = await createContactFromUser(user);
 
     const { providerId } = providerData[0];
     await addTagToNewUser(activeCampaignId, providerId);
@@ -110,5 +106,12 @@ export default functions
     await setUserInternalConfig(uid, {
       activeCampaignId,
       providersSentToActiveCampaign: [providerId],
+    });
+
+    functions.logger.info('Created new contact in ActiveCampaign', {
+      userId: user.uid,
+      userEmail: user.email,
+      activeCampaignId,
+      activeCampaignContactEmail,
     });
   });

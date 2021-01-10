@@ -25,8 +25,6 @@ import { findById, create } from '../repositories/tasks';
 import { RecurringConfig, TaskSources, DurationUnits, DaysOfWeek } from '../types';
 import { isAfter } from 'date-fns';
 
-const log = (message: string) => console.log(`[createRecurringTasks] ${message}`);
-
 export const applies = (
   recurringConfig: RecurringConfig,
   taskScheduledStart: number,
@@ -34,9 +32,11 @@ export const applies = (
 ): boolean => {
   const { unit, amount, activeWeekdays } = recurringConfig;
 
-  if (!unit || !amount) {
-    log(`⚠️ Missing arguments for recurrence`);
-    return false;
+  if (!unit) {
+    throw new Error('Missing unit value');
+  }
+  if (!amount) {
+    throw new Error('Missing amount value');
   }
 
   switch (unit) {
@@ -46,8 +46,7 @@ export const applies = (
     }
     case DurationUnits.Week: {
       if (!activeWeekdays) {
-        log(`⚠️ Missing arguments for week recurrence`);
-        return false;
+        throw new Error('Missing activeWeekdays value for weekly recurrence');
       }
       const weekDifference = differenceInWeeks(now, taskScheduledStart);
       const fulfillsSeparationAmount = weekDifference % amount === 0;
@@ -84,8 +83,7 @@ export const applies = (
       return isAfter(now, applicableDateInThisMonth);
     }
     default:
-      log(`⚠️ Unknown unit ${unit}`);
-      return false;
+      throw new Error(`Unknown unit value "${unit}"`);
   }
 };
 
@@ -96,80 +94,86 @@ const alreadyRunToday = (recurringConfig: RecurringConfig, now: number) =>
  * Scheduled task for creating recurring tasks every morning.
  * Note that this functionality uses Google Cloud Pub/Sub topic and Google Cloud Scheduler, separate
  * APIs that also need to be enabled.
- * @see https://firebase.google.com/docs/functions/schedule-functions
- * @see https://crontab.guru/
+ * @link https://firebase.google.com/docs/functions/schedule-functions
+ * @link https://crontab.guru/
  */
 export default functions.pubsub
   .schedule('*/15 * * * *') // https://crontab.guru/every-15-minutes
   .onRun(async () => {
     const recurringConfigsResult = await findAll();
     const now = Date.now();
-    const createdTaskIds = [];
 
     const configsExcludedAlreadyRun = recurringConfigsResult.filter(
       ([, recurringConfig]) => !alreadyRunToday(recurringConfig, now),
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const logRecords: { [key: string]: any } = {};
+
     for (const [rcId, recurringConfig] of configsExcludedAlreadyRun) {
+      logRecords[rcId] = {
+        rcId,
+        userId: recurringConfig.userId,
+        error: null,
+        mostRecentTaskId: null,
+      };
       try {
-        const { mostRecentTaskId, userId = '' } = recurringConfig;
-        if (!mostRecentTaskId) {
-          log(
-            `🛑 Skipped ${rcId} that was applicable today because no taskId found. userId=${userId}`,
-          );
+        if (!recurringConfig.mostRecentTaskId) {
+          logRecords[rcId].error = {
+            message: 'No taskId found for recurring config',
+          };
           continue;
         }
 
-        const task = await findById(mostRecentTaskId);
+        logRecords[rcId].mostRecentTaskId = recurringConfig.mostRecentTaskId;
+
+        const task = await findById(recurringConfig.mostRecentTaskId);
         if (!task) {
           // @todo: consider deleting the recurring config here, since it's invalid
-          log(
-            `👻 Skipped  ${rcId} because most recent task ${mostRecentTaskId} wasn't found. userId=${userId}`,
-          );
+          logRecords[rcId].error = {
+            message: 'No task found for recurringConfig.mostRecentTaskId',
+          };
           continue;
         }
 
         if (!task.scheduledStart) {
-          log(
-            `🛑 Bad data with ${rcId}, no scheduled start date found for task ${mostRecentTaskId}. userId=${userId}`,
-          );
+          logRecords[rcId].error = {
+            message: 'No scheduled start for most recent task',
+          };
           continue;
         }
 
         if (!applies(recurringConfig, task.scheduledStart, now)) {
-          log(
-            `🔁 Skipped ${rcId} because it isn't applicable today. recurringConfig=${JSON.stringify(
-              recurringConfig,
-            )}. userId=${userId}`,
-          );
+          logRecords[rcId].skipped = true;
+          logRecords[rcId].skippedReason = 'Not applicable';
           continue;
         }
 
         if (!task.completed) {
-          log(
-            `☑️ Skipped ${rcId} because its most recent task ${mostRecentTaskId} isn't completed. userId=${userId}`,
-          );
+          logRecords[rcId].skipped = true;
+          logRecords[rcId].skippedReason = "Most recent task isn't completed";
           continue;
         }
 
         const { userId: taskUserId } = task;
         if (!taskUserId) {
-          log(
-            `🛑 Bad data with ${rcId}, no userId found for task ${mostRecentTaskId}. userId=${userId}`,
-          );
+          logRecords[rcId].error = {
+            message: 'No userId for most recent task',
+          };
           continue;
         }
-        if (taskUserId !== userId) {
-          log(
-            `🛑 Bad data with ${rcId}, task userId ${taskUserId} doesn't match config userId. userId=${userId}`,
-          );
+        if (taskUserId !== recurringConfig.userId) {
+          logRecords[rcId].error = {
+            message: "The userId values of the task and the recurringConfig don't match",
+            recurringConfigUserId: recurringConfig.userId,
+            mostRecentTaskUserId: taskUserId,
+          };
           continue;
         }
 
         if (task.created && isToday(task.created)) {
-          log(
-            `📅 Skipped ${rcId} because the task was created just today. Let's wait until tomorrow to repeat it`,
-          );
+          logRecords[rcId].skipped = true;
+          logRecords[rcId].skippedReason = 'The most recent task was created just today';
         }
 
         const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
@@ -196,23 +200,28 @@ export default functions.pubsub
           mostRecentTaskId: newTaskId,
         });
 
-        createdTaskIds.push(newTaskId);
-
-        log(
-          `✅ Processed ${rcId} applicable today. sourceTaskId=${mostRecentTaskId} newTaskId=${newTaskId}. userId=${userId}`,
-        );
+        logRecords[rcId].taskCreated = true;
+        logRecords[rcId].newTaskId = newTaskId;
       } catch (error) {
-        log(`🛑 Error while processing recurring config ${rcId}`);
-        console.error(error);
+        logRecords[rcId].error = {
+          message: `Runtime error: ${error.message}`,
+          error,
+        };
       }
     }
 
-    if (createdTaskIds.length > 0) {
-      log(
-        `ℹ️ Finished. Created ${createdTaskIds.length} tasks. Execution time: ${
-          Date.now() - now
-        } milliseconds`,
-      );
+    functions.logger.info('Recurring tasks processed', {
+      length: Object.keys(logRecords).length,
+      data: logRecords,
+    });
+
+    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
+    if (errors.length > 0) {
+      functions.logger.error('Errors processing recurring tasks', {
+        length: errors.length,
+        data: errors,
+      });
     }
+
     return null;
   });

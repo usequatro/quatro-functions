@@ -1,2 +1,2 @@
 // Google datacenter region
-export default 'us-east1';
+export default 'us-central1';

@@ -7,22 +7,34 @@ import {
   getUserInternalConfig,
 } from '../repositories/userInternalConfigs';
 
-// @see https://firebase.google.com/docs/functions/auth-events
+// @link https://firebase.google.com/docs/functions/auth-events
 export default functions
   .region(REGION)
   .auth.user()
   .onDelete(async (user) => {
-    console.log(`▶️ ActiveCampaign user deletion ${user.uid} ${user.email}`);
     const { uid } = user;
 
     const userInternalConfig = await getUserInternalConfig(uid);
     if (!userInternalConfig) {
-      console.log(`User internal config not found  for user ${user.uid} ${user.email}`);
+      functions.logger.info('Skipping because user internal config not found', {
+        userId: user.uid,
+        userEmail: user.email,
+      });
       return;
     }
     const { activeCampaignId } = userInternalConfig;
     if (activeCampaignId) {
       await deleteContact(activeCampaignId);
+      functions.logger.info('Deleted ActiveCampaign contact for user', {
+        userId: user.uid,
+        userEmail: user.email,
+        activeCampaignId,
+      });
+    } else {
+      functions.logger.info('Skipping because no ActiveCampaign contact ID', {
+        userId: user.uid,
+        userEmail: user.email,
+      });
     }
     await deleteUserInternalConfig(uid);
   });
