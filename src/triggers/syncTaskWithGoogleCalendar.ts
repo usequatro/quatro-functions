@@ -11,9 +11,6 @@ import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
 type TaskWrapper = { id: string; data: Task };
 
-const log = (prefix: string, message: string) =>
-  console.log(`📅 [syncTaskWithGoogleCalendar] ${prefix} - ${message}`);
-
 const areCalendarEventFieldsDifferent = (taskA: Task, taskB: Task) =>
   Boolean(
     taskA.title !== taskB.title ||
@@ -35,19 +32,9 @@ const getProviderCalendarIdFromFirestoreCalendarId = async (calendarId: string) 
   return providerCalendarId;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prettyPrintGoogleApiErrorResponse = (error: any) => {
-  console.error(
-    `Error response. Message="${error.message || ''}" Errors=${JSON.stringify(error.errors || [])}`,
-  );
-  throw error; // propagate error
-};
-
-const processEventCreation = async (userId: string, after: TaskWrapper, prefix: string) => {
-  log(prefix, 'Processing event creation');
-
+const processEventCreation = async (userId: string, after: TaskWrapper) => {
   if (!after.data.calendarBlockCalendarId) {
-    throw new Error(`No after.data.calendarBlockCalendarId - ${prefix}`);
+    throw new Error('No after.data.calendarBlockCalendarId when creating event');
   }
 
   const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
@@ -80,25 +67,40 @@ const processEventCreation = async (userId: string, after: TaskWrapper, prefix: 
         visibility: 'private',
       },
     })
-    .then((response) => {
-      const eventId = response.data.id;
-      return updateTask(after.id, { calendarBlockProviderEventId: eventId });
-    }, prettyPrintGoogleApiErrorResponse);
+    .then(
+      async (response) => {
+        const eventId = response.data.id;
+        await updateTask(after.id, { calendarBlockProviderEventId: eventId });
+
+        functions.logger.info('Processed Google Calendar event creation', {
+          googleCalendarEventId: eventId,
+          userId,
+          taskId: after.id,
+        });
+      },
+      (error) => {
+        functions.logger.error('Error response from events.insert', {
+          providerCalendarId,
+          userId,
+          taskId: after.id,
+          errorMessage: error.message,
+          errors: error.errors,
+        });
+        throw error;
+      },
+    );
 };
 
 const processEventDeletion = async (
   userId: string,
   before: TaskWrapper,
   after: TaskWrapper | null,
-  prefix: string,
 ) => {
-  log(prefix, 'Processing event deletion');
-
   if (!before.data.calendarBlockCalendarId) {
-    throw new Error(`No before.data.calendarBlockCalendarId - ${prefix}`);
+    throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
   }
   if (!before.data.calendarBlockProviderEventId) {
-    throw new Error(`No before.data.calendarBlockProviderEventId - ${prefix}`);
+    throw new Error(`No before.data.calendarBlockProviderEventId in task ${before.id}`);
   }
 
   // Check if task had a connected calendar event, and delete it too
@@ -116,29 +118,45 @@ const processEventDeletion = async (
       eventId: before.data.calendarBlockProviderEventId,
       calendarId: providerCalendarId,
     })
-    .then(() => {
-      // If task still exists, clear values for being connected to a Google Calendar event
-      if (
-        after &&
-        (after.data.calendarBlockProviderEventId || after.data.calendarBlockCalendarId)
-      ) {
-        return updateTask(after.id, {
-          calendarBlockProviderEventId: null,
-          calendarBlockCalendarId: null,
+    .then(
+      () => {
+        // If task still exists, clear values for being connected to a Google Calendar event
+        if (
+          after &&
+          (after.data.calendarBlockProviderEventId || after.data.calendarBlockCalendarId)
+        ) {
+          return updateTask(after.id, {
+            calendarBlockProviderEventId: null,
+            calendarBlockCalendarId: null,
+          });
+        }
+        functions.logger.info('Processed Google Calendar event deletion', {
+          googleCalendarEventId: before.data.calendarBlockProviderEventId,
+          userId,
+          taskId: before.id,
         });
-      }
-      return undefined;
-    }, prettyPrintGoogleApiErrorResponse);
+        return undefined;
+      },
+      (error) => {
+        functions.logger.error('Error response from events.delete', {
+          providerCalendarId,
+          googleCalendarEventId: before.data.calendarBlockProviderEventId,
+          userId,
+          taskId: before.id,
+          errorMessage: error.message,
+          errors: error.errors,
+        });
+        throw error;
+      },
+    );
 };
 
-const processEventPatch = async (userId: string, after: TaskWrapper, prefix: string) => {
-  log(prefix, 'Processing event patch');
-
+const processEventPatch = async (userId: string, after: TaskWrapper) => {
   if (!after.data.calendarBlockCalendarId) {
-    throw new Error(`No after.data..calendarBlockCalendarId - ${prefix}`);
+    throw new Error(`No after.data..calendarBlockCalendarId in task ${after.id}`);
   }
   if (!after.data.calendarBlockProviderEventId) {
-    throw new Error(`No after.data..calendarBlockProviderEventId - ${prefix}`);
+    throw new Error(`No after.data..calendarBlockProviderEventId in task ${after.id}`);
   }
 
   const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
@@ -165,25 +183,35 @@ const processEventPatch = async (userId: string, after: TaskWrapper, prefix: str
         },
       },
     })
-    .catch(prettyPrintGoogleApiErrorResponse);
+    .then(() => {
+      functions.logger.info('Processed Google Calendar event patching', {
+        googleCalendarEventId: after.data.calendarBlockProviderEventId,
+        userId,
+        taskId: after.id,
+      });
+    })
+    .catch((error) => {
+      functions.logger.error('Error response from events.patch', {
+        providerCalendarId,
+        googleCalendarEventId: after.data.calendarBlockProviderEventId,
+        userId,
+        taskId: after.id,
+        errorMessage: error.message,
+        errors: error.errors,
+      });
+      throw error;
+    });
 };
 
-const processEventMove = async (
-  userId: string,
-  before: TaskWrapper,
-  after: TaskWrapper,
-  prefix: string,
-) => {
-  log(prefix, 'Processing event calendar moving');
-
+const processEventMove = async (userId: string, before: TaskWrapper, after: TaskWrapper) => {
   if (!before.data.calendarBlockCalendarId) {
-    throw new Error(`No before.data.calendarBlockCalendarId - ${prefix}`);
+    throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
   }
   if (!before.data.calendarBlockProviderEventId) {
-    throw new Error(`No before.data.calendarBlockProviderEventId - ${prefix}`);
+    throw new Error(`No before.data.calendarBlockProviderEventId in task ${before.id}`);
   }
   if (!after.data.calendarBlockCalendarId) {
-    throw new Error(`No after.data.calendarBlockCalendarId - ${prefix}`);
+    throw new Error(`No after.data.calendarBlockCalendarId in task ${after.id}`);
   }
 
   const beforeProviderCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
@@ -204,7 +232,27 @@ const processEventMove = async (
       destination: afterProviderCalendarId,
       eventId: before.data.calendarBlockProviderEventId,
     })
-    .then(() => prettyPrintGoogleApiErrorResponse);
+    .then(() => {
+      functions.logger.info('Processed Google Calendar event moving', {
+        googleCalendarEventId: after.data.calendarBlockProviderEventId,
+        beforeProviderCalendarId,
+        afterProviderCalendarId,
+        userId,
+        taskId: after.id,
+      });
+    })
+    .catch((error) => {
+      functions.logger.error('Error response from events.move', {
+        beforeProviderCalendarId,
+        afterProviderCalendarId,
+        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        userId,
+        taskId: after.id,
+        errorMessage: error.message,
+        errors: error.errors,
+      });
+      throw error;
+    });
 };
 
 export default functions
@@ -220,10 +268,13 @@ export default functions
       : null;
 
     const userId = after?.data.userId || before?.data.userId;
-    const prefix = `before=${before?.id || '-'} after=${after?.id || '-'} userId=${userId || '-'}`;
 
     if (!userId) {
-      throw new Error(`No user ID found in either after or before task - ${prefix}`);
+      throw new Error(
+        `No user ID found in either
+          before task ${before?.id || '-'} or
+          after task ${after?.id || '-'}`,
+      );
     }
 
     // Deletion
@@ -233,7 +284,7 @@ export default functions
       before.data.calendarBlockProviderEventId &&
       (!after || !taskHasCalendarBlock(after.data))
     ) {
-      return processEventDeletion(userId, before, after, prefix);
+      return processEventDeletion(userId, before, after);
     }
 
     // Creation
@@ -243,7 +294,7 @@ export default functions
       after.data.calendarBlockCalendarId &&
       taskHasCalendarBlock(after.data)
     ) {
-      return processEventCreation(userId, after, prefix);
+      return processEventCreation(userId, after);
     }
 
     // Moving to different calendar
@@ -254,10 +305,10 @@ export default functions
       after.data.calendarBlockCalendarId &&
       before.data.calendarBlockCalendarId !== after.data.calendarBlockCalendarId
     ) {
-      return processEventMove(userId, before, after, prefix).then(() => {
+      return processEventMove(userId, before, after).then(() => {
         // Then check if there are other changes, if so we need to change it as well
         if (areCalendarEventFieldsDifferent(before.data, after.data)) {
-          return processEventPatch(userId, after, prefix);
+          return processEventPatch(userId, after);
         }
         return undefined;
       });
@@ -272,9 +323,8 @@ export default functions
       before.data.calendarBlockCalendarId === after.data.calendarBlockCalendarId &&
       areCalendarEventFieldsDifferent(before.data, after.data)
     ) {
-      return processEventPatch(userId, after, prefix);
+      return processEventPatch(userId, after);
     }
 
-    log(prefix, 'Skipping, nothing to do');
     return undefined;
   });

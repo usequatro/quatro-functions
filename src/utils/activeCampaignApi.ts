@@ -48,12 +48,12 @@ export const addContactToList = async (
   postRequest(buildUrl('/contactLists'), acHeaders, contactList) as Promise<AcContactListResponse>;
 
 // Use this endpoint to add values to a Contact's Custom Field
-export const addCustomFieldValue = async (
+export const setCustomFieldValue = async (
   fieldValue: AcFieldValuePayload,
 ): Promise<AcFieldValueResponse> =>
   postRequest(buildUrl('/fieldValues'), acHeaders, fieldValue) as Promise<AcFieldValueResponse>;
 
-export const addTagToUser = async (
+export const addTagToContact = async (
   contactTag: AcContactTagPayload,
 ): Promise<AcContactTagResponse> =>
   postRequest(buildUrl('/contactTags'), acHeaders, contactTag) as Promise<AcContactTagResponse>;

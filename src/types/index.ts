@@ -161,11 +161,3 @@ export type AcContactTagPayload = {
 export type AcContactTagResponse = {
   contacts: AcContact[];
 } & AcContactTagPayload;
-
-// Calendar collection types
-export type CalendarDocument = {
-  userId: string;
-  provider: string;
-  providerCalendarId: string;
-  providerUserEmail: string;
-};

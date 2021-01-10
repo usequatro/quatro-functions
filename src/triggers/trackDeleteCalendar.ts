@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions';
 
-import { CalendarDocument } from '../types';
-import { addCustomFieldValue } from '../utils/activeCampaignApi';
+import { Calendar } from '../schemas/calendar';
+import { setCustomFieldValue } from '../utils/activeCampaignApi';
 import { CALENDARS_FIELD } from '../constants/activeCampaign';
 import {
-  getUserCalendarsCount,
+  findUserCalendarsCount,
   COLLECTION as CALENDARS_COLLECTION,
 } from '../repositories/calendars';
 import { getUserInternalConfig } from '../repositories/userInternalConfigs';
@@ -14,9 +14,9 @@ export default functions
   .region(REGION)
   .firestore.document(`${CALENDARS_COLLECTION}/{calendarId}`)
   .onDelete(async (change) => {
-    const { userId } = change.data() as CalendarDocument;
+    const { userId } = change.data() as Calendar;
 
-    const calendarsCount = await getUserCalendarsCount(userId);
+    const calendarsCount = await findUserCalendarsCount(userId);
     const newCount = calendarsCount > 0 ? calendarsCount - 1 : 0;
 
     const userInternalConfig = await getUserInternalConfig(userId);
@@ -29,11 +29,16 @@ export default functions
       throw new Error(`User ${userId} doesn't have an ActiveCampaign ID`);
     }
 
-    await addCustomFieldValue({
+    await setCustomFieldValue({
       fieldValue: {
         contact: activeCampaignId,
         field: CALENDARS_FIELD.id,
         value: `${newCount}`,
       },
+    });
+    functions.logger.info('Updated ActiveCampaign contact with calendar count', {
+      activeCampaignId,
+      userId,
+      newCount,
     });
   });
