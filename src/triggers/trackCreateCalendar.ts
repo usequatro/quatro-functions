@@ -12,10 +12,10 @@ import {
 import { Calendar } from '../schemas/calendar';
 import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 
-const addGoogleTagToContact = (activeCampaignId: string): Promise<AcContactTagResponse> => {
+const addGoogleTagToContact = (activeCampaignContactId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
     contactTag: {
-      contact: activeCampaignId,
+      contact: activeCampaignContactId,
       tag: SIGNED_GOOGLE_TAG.id,
     },
   };
@@ -48,9 +48,9 @@ export default functions
     if (!userInternalConfig) {
       throw new Error(`User internal config for user ${userId} not found`);
     }
-    const { activeCampaignId, providersSentToActiveCampaign = [] } = userInternalConfig;
+    const { activeCampaignContactId, providersSentToActiveCampaign = [] } = userInternalConfig;
 
-    if (!activeCampaignId) {
+    if (!activeCampaignContactId) {
       throw new Error(`User ${userId} doesn't have an ActiveCampaign ID`);
     }
 
@@ -62,7 +62,7 @@ export default functions
     ) {
       const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);
       if (signedUpWithGoogle) {
-        await addGoogleTagToContact(activeCampaignId);
+        await addGoogleTagToContact(activeCampaignContactId);
         await setUserInternalConfig(userId, {
           providersSentToActiveCampaign: [
             ...providersSentToActiveCampaign,
@@ -71,7 +71,7 @@ export default functions
         });
 
         functions.logger.info('Added Google Tag to ActiveCampaign conctact', {
-          activeCampaignId,
+          activeCampaignContactId,
           userId,
         });
       }
@@ -80,13 +80,13 @@ export default functions
     const newCount = `${calendarsCount + 1}`;
     await setCustomFieldValue({
       fieldValue: {
-        contact: activeCampaignId,
+        contact: activeCampaignContactId,
         field: CALENDARS_FIELD.id,
         value: newCount,
       },
     });
     functions.logger.info('Updated ActiveCampaign contact with calendar count', {
-      activeCampaignId,
+      activeCampaignContactId,
       userId,
       newCount,
     });

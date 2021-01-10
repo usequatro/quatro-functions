@@ -26,12 +26,12 @@ const addDevelopmentFlagToAvoidCollisionsBetweenEnvironments = (email: string) =
 const createContactFromUser = async (user: UserRecord): Promise<[string, string]> => {
   const { email = '', phoneNumber, displayName } = user;
 
-  const activeCampaignContactEmail =
+  const contactEmail =
     ENVIRONMENT === 'dev' ? addDevelopmentFlagToAvoidCollisionsBetweenEnvironments(email) : email;
 
   const acPayload = {
     contact: {
-      email: activeCampaignContactEmail,
+      email: contactEmail,
       firstName: displayName,
       phone: phoneNumber,
       fieldValues: [{ field: CALENDARS_FIELD.id, value: '0' }],
@@ -39,15 +39,15 @@ const createContactFromUser = async (user: UserRecord): Promise<[string, string]
   } as AcContactPayload;
 
   const response = await createContact(acPayload);
-  const activeCampaignId = response.contact?.id;
-  if (!activeCampaignId) {
+  const contactId = response.contact?.id;
+  if (!contactId) {
     console.info(JSON.stringify(response));
     throw new Error(
       `Active Campaign user not created for email ${user.email}. Contact ID not returned`,
     );
   }
 
-  return [activeCampaignId, activeCampaignContactEmail];
+  return [contactId, contactEmail];
 };
 
 const GOOGLE_PROVIDER = 'google.com';
@@ -59,7 +59,7 @@ const tagFromProvider: { [key: string]: typeof SIGNED_GOOGLE_TAG } = {
 };
 
 const addTagToNewUser = async (
-  activeCampaignId: string,
+  activeCampaignContactId: string,
   providerId: string,
 ): Promise<AcContactTagResponse> => {
   const signedTag = tagFromProvider[providerId];
@@ -70,7 +70,7 @@ const addTagToNewUser = async (
 
   const contactTagPayload: AcContactTagPayload = {
     contactTag: {
-      contact: activeCampaignId,
+      contact: activeCampaignContactId,
       tag: signedTag.id,
     },
   };
@@ -78,10 +78,12 @@ const addTagToNewUser = async (
   return addTagToContact(contactTagPayload);
 };
 
-const addNewUsertoList = async (activeCampaignId: string): Promise<AcContactListResponse> => {
+const addNewUsertoList = async (
+  activeCampaignContactId: string,
+): Promise<AcContactListResponse> => {
   const contactListPayload: AcContactListPayload = {
     contactList: {
-      contact: activeCampaignId,
+      contact: activeCampaignContactId,
       list: ENVIRONMENT === 'prod' ? MAIN_LIST.id : DEVELOPMENT_LIST.id,
       status: 1,
     },
@@ -97,21 +99,21 @@ export default functions
   .onCreate(async (user) => {
     const { uid, providerData } = user;
 
-    const [activeCampaignId, activeCampaignContactEmail] = await createContactFromUser(user);
+    const [activeCampaignContactId, activeCampaignContactEmail] = await createContactFromUser(user);
 
     const { providerId } = providerData[0];
-    await addTagToNewUser(activeCampaignId, providerId);
-    await addNewUsertoList(activeCampaignId);
+    await addTagToNewUser(activeCampaignContactId, providerId);
+    await addNewUsertoList(activeCampaignContactId);
 
     await setUserInternalConfig(uid, {
-      activeCampaignId,
+      activeCampaignContactId,
       providersSentToActiveCampaign: [providerId],
     });
 
     functions.logger.info('Created new contact in ActiveCampaign', {
       userId: user.uid,
       userEmail: user.email,
-      activeCampaignId,
+      activeCampaignContactId,
       activeCampaignContactEmail,
     });
   });
