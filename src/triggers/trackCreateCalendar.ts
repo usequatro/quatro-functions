@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
-import { AcContactTagPayload, AcContactTagResponse, AcFieldValuePayload } from '../types';
+import { AcContactTagPayload, AcContactTagResponse } from '../types';
 import { setCustomFieldValue, addTagToContact } from '../utils/activeCampaignApi';
 import { CALENDARS_FIELD, SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';

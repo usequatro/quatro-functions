@@ -15,7 +15,7 @@ import {
   SIGNED_GOOGLE_TAG,
   SIGNED_PASSWORD_TAG,
 } from '../constants/activeCampaign';
-import { addTagToUser, createContact, addContactToList } from '../utils/activeCampaignApi';
+import { addTagToContact, createContact, addContactToList } from '../utils/activeCampaignApi';
 import REGION from '../constants/region';
 import ENVIRONMENT from '../constants/environment';
 import { setUserInternalConfig } from '../repositories/userInternalConfigs';
@@ -75,7 +75,7 @@ const addTagToNewUser = async (
     },
   };
 
-  return addTagToUser(contactTagPayload);
+  return addTagToContact(contactTagPayload);
 };
 
 const addNewUsertoList = async (activeCampaignId: string): Promise<AcContactListResponse> => {
