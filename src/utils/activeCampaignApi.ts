@@ -27,6 +27,8 @@ const acHeaders: { [key: string]: string } = {
   'Api-Token': key,
 };
 
+// @link ActiveCampaign v3 Reference: https://developers.activecampaign.com/reference
+
 export const getAllLists = async (): Promise<AcListResponse> =>
   getRequest(buildUrl('/lists'), acHeaders) as Promise<AcListResponse>;
 
@@ -57,3 +59,17 @@ export const addTagToContact = async (
   contactTag: AcContactTagPayload,
 ): Promise<AcContactTagResponse> =>
   postRequest(buildUrl('/contactTags'), acHeaders, contactTag) as Promise<AcContactTagResponse>;
+
+// export const getContactTags = async (contactId: string): Promise<AcContactTagResponse> =>
+//   getRequest(
+//     buildUrl(`/contacts/${contactId}/contactTags`),
+//     acHeaders,
+//   ) as Promise<AcContactTagResponse>;
+
+export const deleteTagFromContact = async (
+  contactTagId: AcContactTagPayload,
+): Promise<AcContactTagResponse> =>
+  deleteRequest(
+    buildUrl(`/contactTags/${contactTagId}`),
+    acHeaders,
+  ) as Promise<AcContactTagResponse>;

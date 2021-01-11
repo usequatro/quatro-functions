@@ -7,8 +7,10 @@ export const COLLECTION = 'calendars';
 
 export type FirestoreSnapshot = admin.firestore.QuerySnapshot<admin.firestore.DocumentData>;
 
-const findCalendarsByUserId = (userId: string): Promise<FirestoreSnapshot> =>
-  admin.firestore().collection(COLLECTION).where(userId, '==', userId).get();
+export const findCalendarsByUserId = async (userId: string): Promise<[string, Calendar][]> => {
+  const snapshot = await admin.firestore().collection(COLLECTION).where(userId, '==', userId).get();
+  return snapshot.docs.map((doc) => [doc.id, doc.data() as Calendar]);
+};
 
 export const getCalendarById = async (id: string): Promise<[string, Calendar] | undefined> => {
   const document = await admin.firestore().collection(COLLECTION).doc(id).get();
@@ -34,7 +36,7 @@ export const findCalendarByWatcher = async (
 
 export const findUserCalendarsCount = async (userId: string): Promise<number> => {
   const calendars = await findCalendarsByUserId(userId);
-  return calendars.docs.length;
+  return calendars.length;
 };
 
 export const updateCalendar = async (
@@ -68,3 +70,6 @@ export const findCalendarsWithExpiringGoogleCalendarChannel = async (
   }
   return querySnapshot.docs.map((doc) => [doc.id, doc.data() as Calendar]);
 };
+
+export const deleteCalendar = (id: string): Promise<FirebaseFirestore.WriteResult> =>
+  admin.firestore().collection(COLLECTION).doc(id).delete();
