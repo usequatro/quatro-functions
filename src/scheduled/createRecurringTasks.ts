@@ -10,6 +10,7 @@ import addMonths from 'date-fns/addMonths';
 import addDays from 'date-fns/addDays';
 import isToday from 'date-fns/isToday';
 import isSameDay from 'date-fns/isSameDay';
+import getYear from 'date-fns/getYear';
 import setDayOfYear from 'date-fns/setDayOfYear';
 import getDayOfYear from 'date-fns/getDayOfYear';
 import getDate from 'date-fns/getDate';
@@ -20,10 +21,11 @@ import isThursday from 'date-fns/isThursday';
 import isFriday from 'date-fns/isFriday';
 import isSaturday from 'date-fns/isSaturday';
 import isSunday from 'date-fns/isSunday';
+import isAfter from 'date-fns/isAfter';
+import setYear from 'date-fns/setYear';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
 import { RecurringConfig, TaskSources, DurationUnits, DaysOfWeek } from '../types';
-import { isAfter } from 'date-fns';
 
 export const applies = (
   recurringConfig: RecurringConfig,
@@ -89,6 +91,12 @@ export const applies = (
 
 const alreadyRunToday = (recurringConfig: RecurringConfig, now: number) =>
   recurringConfig.lastRunDate && isSameDay(now, recurringConfig.lastRunDate);
+
+export const getNewScheduledStart = (oldScheduledStart: number, now: number): number => {
+  const scheduledStartSetToToday = setDayOfYear(oldScheduledStart, getDayOfYear(now));
+  const newScheduledStartDate = setYear(scheduledStartSetToToday, getYear(now));
+  return newScheduledStartDate.getTime();
+};
 
 /**
  * Scheduled task for creating recurring tasks every morning.
@@ -176,7 +184,8 @@ export default functions.pubsub
           logRecords[rcId].skippedReason = 'The most recent task was created just today';
         }
 
-        const newScheduledStart = setDayOfYear(task.scheduledStart, getDayOfYear(now)).getTime();
+        const newScheduledStart = getNewScheduledStart(task.scheduledStart, now);
+
         const newDue = task.due
           ? addDays(task.due, differenceInDays(newScheduledStart, task.scheduledStart)).getTime()
           : null;
