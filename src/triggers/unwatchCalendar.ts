@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import { google } from 'googleapis';
+import isPast from 'date-fns/isPast';
 
 import REGION from '../constants/region';
 import { COLLECTION as CALENDARS_COLLECTION } from '../repositories/calendars';
@@ -19,7 +20,7 @@ export default functions
       });
       return;
     }
-    if (calendar.watcherExpiration && calendar.watcherExpiration < Date.now()) {
+    if (calendar.watcherExpiration && isPast(calendar.watcherExpiration)) {
       functions.logger.info('Skipping because watcher was already expired', {
         calendarId,
         watcherExpiration: calendar.watcherExpiration,

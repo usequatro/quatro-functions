@@ -12,6 +12,7 @@ import {
   AcFieldValueResponse,
   AcContactTagPayload,
   AcContactTagResponse,
+  AcContactTagListResponse,
 } from '../types';
 
 const { url, key } = functions.config().activecampaign || {};
@@ -26,6 +27,8 @@ const buildUrl = (path: string): string => `${url}/api/3${path}`;
 const acHeaders: { [key: string]: string } = {
   'Api-Token': key,
 };
+
+// @link ActiveCampaign v3 Reference: https://developers.activecampaign.com/reference
 
 export const getAllLists = async (): Promise<AcListResponse> =>
   getRequest(buildUrl('/lists'), acHeaders) as Promise<AcListResponse>;
@@ -57,3 +60,17 @@ export const addTagToContact = async (
   contactTag: AcContactTagPayload,
 ): Promise<AcContactTagResponse> =>
   postRequest(buildUrl('/contactTags'), acHeaders, contactTag) as Promise<AcContactTagResponse>;
+
+export const getContactTagsForContact = async (
+  contactId: string,
+): Promise<AcContactTagListResponse> =>
+  getRequest(
+    buildUrl(`/contacts/${contactId}/contactTags`),
+    acHeaders,
+  ) as Promise<AcContactTagListResponse>;
+
+export const deleteTagFromContact = async (contactTagId: string): Promise<AcContactTagResponse> =>
+  deleteRequest(
+    buildUrl(`/contactTags/${contactTagId}`),
+    acHeaders,
+  ) as Promise<AcContactTagResponse>;

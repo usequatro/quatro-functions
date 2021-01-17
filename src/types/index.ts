@@ -97,6 +97,12 @@ export type AcTagsResponse = {
   tags: AcTags[];
 };
 
+export type AcContactTag = {
+  tag: string;
+  contact: string;
+  id: string;
+};
+
 export type AcContactFieldValues = {
   field: string | number;
   value: string;
@@ -159,5 +165,9 @@ export type AcContactTagPayload = {
 };
 
 export type AcContactTagResponse = {
-  contacts: AcContact[];
-} & AcContactTagPayload;
+  contactTag: AcContactTag;
+};
+
+export type AcContactTagListResponse = {
+  contactTags: AcContactTag[];
+};
