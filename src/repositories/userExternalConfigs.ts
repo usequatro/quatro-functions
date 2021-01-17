@@ -28,5 +28,16 @@ export const setUserExternalConfig = async (
     .set(validatedPayload, { merge: true });
 };
 
+export const updateUserExternalConfig = async (
+  userId: string,
+  payload: Partial<UserExternalConfig>,
+): Promise<WriteResult> => {
+  const validatedPayload = await userExternalConfigSchema.validateAsync(payload, {
+    stripUnknown: true,
+    noDefaults: true,
+  });
+  return admin.firestore().collection(COLLECTION).doc(userId).update(validatedPayload);
+};
+
 export const deleteUserExternalConfig = async (userId: string): Promise<WriteResult> =>
   admin.firestore().collection(COLLECTION).doc(userId).delete();

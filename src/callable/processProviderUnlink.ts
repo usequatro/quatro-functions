@@ -7,6 +7,7 @@ import REGION from '../constants/region';
 import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
 import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
+import { updateUserExternalConfig } from '../repositories/userExternalConfigs';
 
 cors({ origin: true });
 
@@ -100,8 +101,11 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
       'The function must be called while authenticated.',
     );
   }
+
+  const userId = context.auth.uid;
+
   if (!data.unlinkedProviderId) {
-    functions.logger.error('No unlinkedProviderId received', { userId: context.auth.uid });
+    functions.logger.error('No unlinkedProviderId received', { userId });
     throw new functions.https.HttpsError('invalid-argument', 'unlinkedProviderId is missing.');
   }
 
@@ -112,7 +116,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
 
   if (unlinkedProvider) {
     functions.logger.error('Unexpectedly provider is still present', {
-      userId: context.auth.uid,
+      userId,
       unlinkedProviderId: data.unlinkedProviderId,
       unlinkedProviderFound: unlinkedProvider,
     });
@@ -120,13 +124,24 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
   }
 
   functions.logger.info('Handling unlinking of provider', {
-    userId: context.auth.uid,
+    userId,
     data,
   });
 
   switch (data.unlinkedProviderId) {
     case 'google.com': {
-      // Remove calendars and cancel their watchers
+      // Remove flag that offline access was granted
+      await updateUserExternalConfig(context.auth.uid, {
+        gapiCalendarOfflineAccess: false,
+      }).catch((error) => {
+        // An error updating could mean the entity doesn't exist. We let this go through
+        functions.logger.error('Error updating user external config', {
+          userId,
+          error: error,
+        });
+      });
+
+      // Remove calendars
       const userCalendars = await findCalendarsByUserId(context.auth.uid);
       const googleCalendars = userCalendars.filter(
         ([, calendar]) => calendar.provider === 'google',
@@ -134,7 +149,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
 
       if (googleCalendars.length === 0) {
         functions.logger.info('No calendars for provider', {
-          userId: context.auth.uid,
+          userId,
           calendars: userCalendars,
         });
       }
@@ -151,7 +166,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
     }
     default: {
       functions.logger.warn('Uknown provider unlinked', {
-        userId: context.auth.uid,
+        userId,
         unlinkedProviderId: data.unlinkedProviderId,
       });
     }
