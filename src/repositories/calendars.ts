@@ -8,7 +8,11 @@ export const COLLECTION = 'calendars';
 export type FirestoreSnapshot = admin.firestore.QuerySnapshot<admin.firestore.DocumentData>;
 
 export const findCalendarsByUserId = async (userId: string): Promise<[string, Calendar][]> => {
-  const snapshot = await admin.firestore().collection(COLLECTION).where(userId, '==', userId).get();
+  const snapshot = await admin
+    .firestore()
+    .collection(COLLECTION)
+    .where('userId', '==', userId)
+    .get();
   return snapshot.docs.map((doc) => [doc.id, doc.data() as Calendar]);
 };
 

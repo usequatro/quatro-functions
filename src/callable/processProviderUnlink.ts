@@ -1,64 +1,14 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
-import { calendar_v3, google } from 'googleapis';
-import isPast from 'date-fns/isPast';
+import cors from 'cors';
 
+import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
-import { Calendar } from '../schemas/calendar';
 import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
+import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
+import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
 
-const unwatchCalendars = async (calendarsToUnwatch: [string, Calendar][]) => {
-  const apiInstancesByUserId: { [userId: string]: calendar_v3.Calendar } = {};
-
-  for (const [id, calendar] of calendarsToUnwatch) {
-    if (
-      !calendar.watcherChannelId ||
-      (calendar.watcherExpiration && isPast(calendar.watcherExpiration))
-    ) {
-      continue;
-    }
-
-    try {
-      if (!apiInstancesByUserId[calendar.userId]) {
-        apiInstancesByUserId[calendar.userId] = await (async () => {
-          const auth = await createGoogleApisAuth(calendar.userId);
-          return google.calendar({ version: 'v3', auth });
-        })();
-      }
-    } catch (error) {
-      functions.logger.error('Error creating Google Api Auth for user of calendar to unwatch', {
-        calendarId: id,
-        error: error,
-      });
-      continue;
-    }
-
-    const calendarApi = apiInstancesByUserId[calendar.userId];
-
-    await calendarApi.channels
-      .stop({
-        requestBody: {
-          id: calendar.watcherChannelId,
-          resourceId: calendar.watcherResourceId,
-        },
-      })
-      .then(() => {
-        functions.logger.info('Stopped watching deleted calendar', {
-          calendarId: id,
-          watcherChannelId: calendar.watcherChannelId,
-          watcherResourceId: calendar.watcherResourceId,
-        });
-      })
-      .catch((error) => {
-        functions.logger.error('Error response from channels.stop', {
-          calendarId: id,
-          errorMessage: error.message,
-          errors: error.errors,
-        });
-      });
-  }
-};
+cors({ origin: true });
 
 const deleteCalendars = async (calendarIds: string[]) => {
   for (const id of calendarIds) {
@@ -74,6 +24,66 @@ const deleteCalendars = async (calendarIds: string[]) => {
           error: error,
         });
       });
+  }
+};
+
+const removeActiveCampaignProviderTag = async (userId: string, providerId: string) => {
+  const providerIdToActiveCampaignTagId: { [key: string]: string } = {
+    'google.com': SIGNED_GOOGLE_TAG.id,
+  };
+  const activeCampaignTagIdToRemove = providerIdToActiveCampaignTagId[providerId];
+
+  if (!activeCampaignTagIdToRemove) {
+    functions.logger.error('ActiveCampaign tag not found for provider', {
+      userId: userId,
+      unlinkedProviderId: providerId,
+      providerIdToActiveCampaignTagId,
+    });
+    return;
+  }
+
+  const userInternalConfig = await getUserInternalConfig(userId);
+  if (!userInternalConfig || !userInternalConfig.activeCampaignContactId) {
+    functions.logger.info('No ActiveCampaign contact to remove a contact tag from', {
+      userId: userId,
+      unlinkedProviderId: providerId,
+    });
+    return;
+  }
+
+  try {
+    const response = await getContactTagsForContact(userInternalConfig.activeCampaignContactId);
+    const googleContactTag = (response.contactTags || []).find(
+      (contactTag) => contactTag.tag === activeCampaignTagIdToRemove,
+    );
+
+    if (googleContactTag) {
+      await deleteTagFromContact(googleContactTag.id);
+      functions.logger.info('ActiveCampaign contact tag removed', {
+        userId: userId,
+        unlinkedProviderId: providerId,
+        contactTag: googleContactTag,
+      });
+    } else {
+      functions.logger.info('No contact tag to remove from ActiveCampaign', {
+        userId: userId,
+        unlinkedProviderId: providerId,
+        contactTags: response.contactTags,
+      });
+    }
+
+    const providersWithoutGoogle = userInternalConfig?.providersSentToActiveCampaign?.filter(
+      (provider) => provider !== providerId,
+    );
+    await setUserInternalConfig(userId, {
+      providersSentToActiveCampaign: providersWithoutGoogle,
+    });
+  } catch (error) {
+    functions.logger.error('Error in ActiveCampaign contact tag cleaning', {
+      userId: userId,
+      unlinkedProviderId: providerId,
+      error,
+    });
   }
 };
 
@@ -101,26 +111,41 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
   );
 
   if (unlinkedProvider) {
-    functions.logger.error('Unexpectedly provider is still pressent', {
+    functions.logger.error('Unexpectedly provider is still present', {
       userId: context.auth.uid,
       unlinkedProviderId: data.unlinkedProviderId,
       unlinkedProviderFound: unlinkedProvider,
     });
-    throw new Error('Unexpectedly provider is still pressent');
+    throw new functions.https.HttpsError('aborted', 'Unexpectedly provider is still present');
   }
+
+  functions.logger.info('Handling unlinking of provider', {
+    userId: context.auth.uid,
+    data,
+  });
 
   switch (data.unlinkedProviderId) {
     case 'google.com': {
-      // @todo: Remove tag from Active Campaign
-
       // Remove calendars and cancel their watchers
       const userCalendars = await findCalendarsByUserId(context.auth.uid);
       const googleCalendars = userCalendars.filter(
         ([, calendar]) => calendar.provider === 'google',
       );
 
-      await unwatchCalendars(googleCalendars);
+      if (googleCalendars.length === 0) {
+        functions.logger.info('No calendars for provider', {
+          userId: context.auth.uid,
+          calendars: userCalendars,
+        });
+      }
+
+      // Since the frontend should be revoking Google Calendar access,
+      // there should be no need to stop active watch channels
+
       await deleteCalendars(googleCalendars.map(([id]) => id));
+
+      // Remove tag from Active Campaign
+      await removeActiveCampaignProviderTag(context.auth.uid, data.unlinkedProviderId);
 
       break;
     }

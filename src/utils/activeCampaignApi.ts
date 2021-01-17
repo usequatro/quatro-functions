@@ -12,6 +12,7 @@ import {
   AcFieldValueResponse,
   AcContactTagPayload,
   AcContactTagResponse,
+  AcContactTagListResponse,
 } from '../types';
 
 const { url, key } = functions.config().activecampaign || {};
@@ -60,15 +61,15 @@ export const addTagToContact = async (
 ): Promise<AcContactTagResponse> =>
   postRequest(buildUrl('/contactTags'), acHeaders, contactTag) as Promise<AcContactTagResponse>;
 
-// export const getContactTags = async (contactId: string): Promise<AcContactTagResponse> =>
-//   getRequest(
-//     buildUrl(`/contacts/${contactId}/contactTags`),
-//     acHeaders,
-//   ) as Promise<AcContactTagResponse>;
+export const getContactTagsForContact = async (
+  contactId: string,
+): Promise<AcContactTagListResponse> =>
+  getRequest(
+    buildUrl(`/contacts/${contactId}/contactTags`),
+    acHeaders,
+  ) as Promise<AcContactTagListResponse>;
 
-export const deleteTagFromContact = async (
-  contactTagId: AcContactTagPayload,
-): Promise<AcContactTagResponse> =>
+export const deleteTagFromContact = async (contactTagId: string): Promise<AcContactTagResponse> =>
   deleteRequest(
     buildUrl(`/contactTags/${contactTagId}`),
     acHeaders,
