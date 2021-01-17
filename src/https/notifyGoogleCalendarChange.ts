@@ -39,6 +39,8 @@ export default functions.region(REGION).https.onRequest(async (request, response
       channelId,
       resourceId,
     });
+    // Since we can't unwatch the calendar because we don't have userId at our disposal, just OK
+    response.sendStatus(200);
     return;
   }
   const [calendarId, calendar] = result;
