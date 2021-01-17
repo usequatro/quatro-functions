@@ -1,10 +1,12 @@
 import * as functions from 'firebase-functions';
+import admin from 'firebase-admin';
 import { google, calendar_v3 } from 'googleapis';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
   findCalendarsWithExpiringGoogleCalendarChannel,
   updateCalendar,
+  deleteCalendar,
 } from '../repositories/calendars';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
@@ -23,6 +25,7 @@ const GOOGLE_CALENDAR_WEBHOOK_URL = functions.config().googleapis.calendarwebhoo
  */
 export default functions.pubsub
   .schedule('0 * * * *') // https://crontab.guru/every-hour
+  // .schedule('* * * * *') // https://crontab.guru/every-minute
   .onRun(async () => {
     const expiringCalendarWrappers = await findCalendarsWithExpiringGoogleCalendarChannel(
       hoursToMillis(THRESHOLD_HOURS),
@@ -32,6 +35,39 @@ export default functions.pubsub
     const logRecords: { [key: string]: any } = {};
 
     for (const [id, calendar] of expiringCalendarWrappers) {
+      logRecords[id] = {
+        calendarId: id,
+        oldExpiration: calendar.watcherExpiration,
+        oldWatcherChannelId: calendar.watcherChannelId,
+        oldWatcherResourceId: calendar.watcherResourceId,
+        providerCalendarId: calendar.providerCalendarId,
+        newWatcherCreated: false,
+        oldWatcherStopped: false,
+        error: null,
+      };
+
+      // Confirm user exists
+      try {
+        await admin.auth().getUser(calendar.userId);
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          await deleteCalendar(id);
+          functions.logger.warn('A calendar for a non-existing user was found. Deleting calendar', {
+            userId: calendar.userId,
+            calendarId: id,
+          });
+          continue;
+        }
+        // Unknown error!
+        logRecords[id].error = {
+          errorMessage: error.message,
+          errorCode: error.code,
+          error,
+          calendarId: id,
+        };
+        continue;
+      }
+
       const auth = await createGoogleApisAuth(calendar.userId);
       const calendarApi = google.calendar({ version: 'v3', auth });
 
@@ -40,17 +76,6 @@ export default functions.pubsub
 
       // Google Calendar API wants us to generate a unique ID for the channel ourselves
       const channelId = uuidv4();
-
-      logRecords[id] = {
-        calendarId: id,
-        oldExpiration: calendar.watcherExpiration,
-        oldWatcherChannelId,
-        oldWatcherResourceId,
-        providerCalendarId: calendar.providerCalendarId,
-        newWatcherCreated: false,
-        oldWatcherStopped: false,
-        error: null,
-      };
 
       // @link https://developers.google.com/calendar/v3/push
       // @link https://developers.google.com/calendar/v3/reference/events/watch
