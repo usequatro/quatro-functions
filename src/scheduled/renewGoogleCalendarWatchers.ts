@@ -153,16 +153,17 @@ export default functions.pubsub
     }
 
     const logRecordsLength = Object.keys(logRecords).length;
+    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
     if (logRecordsLength > 0) {
       functions.logger.info('Google Calendar watcher renewals performed', {
         length: logRecordsLength,
+        errorsLength: errors.length,
         data: logRecords,
       });
     } else {
       functions.logger.info('Google Calendar watcher had no renewals to perform');
     }
 
-    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
     if (errors.length > 0) {
       functions.logger.error('Errors on Google Calendar watcher renewals', {
         length: errors.length,

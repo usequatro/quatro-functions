@@ -219,12 +219,14 @@ export default functions.pubsub
       }
     }
 
+    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
+
     functions.logger.info('Recurring tasks processed', {
       length: Object.keys(logRecords).length,
+      errorsLength: errors.length,
       data: logRecords,
     });
 
-    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
     if (errors.length > 0) {
       functions.logger.error('Errors processing recurring tasks', {
         length: errors.length,
