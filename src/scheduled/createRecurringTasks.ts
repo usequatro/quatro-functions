@@ -159,7 +159,14 @@ export default functions.pubsub
 
         if (!task.completed) {
           logRecords[rcId].skipped = true;
-          logRecords[rcId].skippedReason = "Most recent task isn't completed";
+          logRecords[rcId].skippedReason =
+            "Most recent task isn't completed. Marking as already run today";
+
+          // We skip and also flag as already run today, so this won't apply today anymore even if the most recent task
+          // is completed later
+          await updateRecurringConfig(rcId, {
+            lastRunDate: now,
+          });
           continue;
         }
 
@@ -182,6 +189,12 @@ export default functions.pubsub
         if (task.created && isToday(task.created)) {
           logRecords[rcId].skipped = true;
           logRecords[rcId].skippedReason = 'The most recent task was created just today';
+
+          // We skip and also flag as already run today, so this won't apply today anymore
+          await updateRecurringConfig(rcId, {
+            lastRunDate: now,
+          });
+          continue;
         }
 
         const newScheduledStart = getNewScheduledStart(task.scheduledStart, now);
