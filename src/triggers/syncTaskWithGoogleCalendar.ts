@@ -15,7 +15,6 @@ const areCalendarEventFieldsDifferent = (taskA: Task, taskB: Task) =>
   Boolean(
     taskA.title !== taskB.title ||
       taskA.description !== taskB.description ||
-      taskA.completed !== taskB.completed ||
       taskA.calendarBlockStart !== taskB.calendarBlockStart ||
       taskA.calendarBlockEnd !== taskB.calendarBlockEnd,
   );
@@ -75,7 +74,6 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
         extendedProperties: {
           private: {
             taskId: after.id,
-            taskCompleted: `${after.data.completed || 0}`, // use 0 so we could query for it
           },
         },
         status: 'confirmed',
@@ -141,6 +139,8 @@ const processEventDeletion = async (
         (after.data.calendarBlockProviderEventId || after.data.calendarBlockCalendarId)
       ) {
         await updateTask(after.id, {
+          calendarBlockEnd: null,
+          calendarBlockStart: null,
           calendarBlockProviderEventId: null,
           calendarBlockCalendarId: null,
         });
@@ -195,12 +195,6 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
         },
         end: {
           dateTime: formatISO(after.data.calendarBlockEnd || 0),
-        },
-        // @link https://developers.google.com/calendar/extended-properties
-        extendedProperties: {
-          private: {
-            taskCompleted: `${after.data.completed || 0}`, // use 0 so we could query for it
-          },
         },
       },
     })
@@ -306,7 +300,7 @@ export default functions
       before &&
       before.data.calendarBlockCalendarId &&
       before.data.calendarBlockProviderEventId &&
-      (!after || !taskHasCalendarBlock(after.data))
+      (!after || !taskHasCalendarBlock(after.data) || after.data.completed)
     ) {
       return processEventDeletion(userId, before, after);
     }
