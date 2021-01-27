@@ -6,7 +6,7 @@ import formatISO from 'date-fns/formatISO';
 import REGION from '../constants/region';
 import { Task } from '../types';
 import { update as updateTask } from '../repositories/tasks';
-import { getCalendarById } from '../repositories/calendars';
+import { getCalendarById, updateCalendar } from '../repositories/calendars';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
 type TaskWrapper = { id: string; data: Task };
@@ -32,14 +32,23 @@ const getProviderCalendarIdFromFirestoreCalendarId = async (calendarId: string) 
   return providerCalendarId;
 };
 
+const updateCalendarWatcherTime = (calendarId: string, userId: string) =>
+  updateCalendar(calendarId, { watcherLastUpdated: Date.now() }).catch((error) => {
+    functions.logger.error('Error updating calendar watcherLastUpdated', {
+      calendarId,
+      userId,
+      errorCode: error.code,
+      errorMessage: error.message,
+    });
+  });
+
 const processEventCreation = async (userId: string, after: TaskWrapper) => {
-  if (!after.data.calendarBlockCalendarId) {
+  const calendarId = after.data.calendarBlockCalendarId;
+  if (!calendarId) {
     throw new Error('No after.data.calendarBlockCalendarId when creating event');
   }
 
-  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
-    after.data.calendarBlockCalendarId,
-  );
+  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(calendarId);
 
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
@@ -67,28 +76,29 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
         visibility: 'private',
       },
     })
-    .then(
-      async (response) => {
-        const eventId = response.data.id;
-        await updateTask(after.id, { calendarBlockProviderEventId: eventId });
+    .then(async (response) => {
+      const eventId = response.data.id;
+      await updateTask(after.id, { calendarBlockProviderEventId: eventId });
 
-        functions.logger.info('Processed Google Calendar event creation', {
-          googleCalendarEventId: eventId,
-          userId,
-          taskId: after.id,
-        });
-      },
-      (error) => {
-        functions.logger.error('Error response from events.insert', {
-          providerCalendarId,
-          userId,
-          taskId: after.id,
-          errorMessage: error.message,
-          errors: error.errors,
-        });
-        throw error;
-      },
-    );
+      // Update watcher time so client refreshes the events list
+      await updateCalendarWatcherTime(calendarId, userId);
+
+      functions.logger.info('Processed Google Calendar event creation', {
+        googleCalendarEventId: eventId,
+        userId,
+        taskId: after.id,
+      });
+    })
+    .catch((error) => {
+      functions.logger.error('Error response from events.insert', {
+        providerCalendarId,
+        userId,
+        taskId: after.id,
+        errorMessage: error.message,
+        errors: error.errors,
+      });
+      throw error;
+    });
 };
 
 const processEventDeletion = async (
@@ -96,7 +106,8 @@ const processEventDeletion = async (
   before: TaskWrapper,
   after: TaskWrapper | null,
 ) => {
-  if (!before.data.calendarBlockCalendarId) {
+  const calendarId = before.data.calendarBlockCalendarId;
+  if (!calendarId) {
     throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
   }
   if (!before.data.calendarBlockProviderEventId) {
@@ -104,9 +115,7 @@ const processEventDeletion = async (
   }
 
   // Check if task had a connected calendar event, and delete it too
-  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
-    before.data.calendarBlockCalendarId,
-  );
+  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(calendarId);
 
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
@@ -118,50 +127,49 @@ const processEventDeletion = async (
       eventId: before.data.calendarBlockProviderEventId,
       calendarId: providerCalendarId,
     })
-    .then(
-      () => {
-        // If task still exists, clear values for being connected to a Google Calendar event
-        if (
-          after &&
-          (after.data.calendarBlockProviderEventId || after.data.calendarBlockCalendarId)
-        ) {
-          return updateTask(after.id, {
-            calendarBlockProviderEventId: null,
-            calendarBlockCalendarId: null,
-          });
-        }
-        functions.logger.info('Processed Google Calendar event deletion', {
-          googleCalendarEventId: before.data.calendarBlockProviderEventId,
-          userId,
-          taskId: before.id,
+    .then(async () => {
+      // If task still exists, clear values for being connected to a Google Calendar event
+      if (
+        after &&
+        (after.data.calendarBlockProviderEventId || after.data.calendarBlockCalendarId)
+      ) {
+        await updateTask(after.id, {
+          calendarBlockProviderEventId: null,
+          calendarBlockCalendarId: null,
         });
-        return undefined;
-      },
-      (error) => {
-        functions.logger.error('Error response from events.delete', {
-          providerCalendarId,
-          googleCalendarEventId: before.data.calendarBlockProviderEventId,
-          userId,
-          taskId: before.id,
-          errorMessage: error.message,
-          errors: error.errors,
-        });
-        throw error;
-      },
-    );
+
+        // Update watcher time so client refreshes the events list
+        await updateCalendarWatcherTime(calendarId, userId);
+      }
+      functions.logger.info('Processed Google Calendar event deletion', {
+        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        userId,
+        taskId: before.id,
+      });
+    })
+    .catch((error) => {
+      functions.logger.error('Error response from events.delete', {
+        providerCalendarId,
+        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        userId,
+        taskId: before.id,
+        errorMessage: error.message,
+        errors: error.errors,
+      });
+      throw error;
+    });
 };
 
 const processEventPatch = async (userId: string, after: TaskWrapper) => {
-  if (!after.data.calendarBlockCalendarId) {
+  const calendarId = after.data.calendarBlockCalendarId;
+  if (!calendarId) {
     throw new Error(`No after.data..calendarBlockCalendarId in task ${after.id}`);
   }
   if (!after.data.calendarBlockProviderEventId) {
     throw new Error(`No after.data..calendarBlockProviderEventId in task ${after.id}`);
   }
 
-  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
-    after.data.calendarBlockCalendarId,
-  );
+  const providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(calendarId);
 
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
@@ -183,7 +191,10 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
         },
       },
     })
-    .then(() => {
+    .then(async () => {
+      // Update watcher time so client refreshes the events list
+      await updateCalendarWatcherTime(calendarId, userId);
+
       functions.logger.info('Processed Google Calendar event patching', {
         googleCalendarEventId: after.data.calendarBlockProviderEventId,
         userId,
