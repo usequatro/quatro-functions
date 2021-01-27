@@ -71,6 +71,13 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
           title: 'Quatro',
           url: 'https://usequatro.com', // @TODO: add reliable URL for editing task here
         },
+        // @link https://developers.google.com/calendar/extended-properties
+        extendedProperties: {
+          private: {
+            taskId: after.id,
+            taskCompleted: `${after.data.completed || 0}`, // use 0 so we could query for it
+          },
+        },
         status: 'confirmed',
         transparency: 'opaque',
         visibility: 'private',
@@ -188,6 +195,12 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
         },
         end: {
           dateTime: formatISO(after.data.calendarBlockEnd || 0),
+        },
+        // @link https://developers.google.com/calendar/extended-properties
+        extendedProperties: {
+          private: {
+            taskCompleted: `${after.data.completed || 0}`, // use 0 so we could query for it
+          },
         },
       },
     })
