@@ -75,7 +75,7 @@ const processEventCreation = async (userId: string, after: TaskWrapper, reason: 
         },
         source: {
           title: 'Quatro',
-          url: 'https://usequatro.com', // @TODO: add reliable URL for editing task here
+          url: `https://usequatro.com/task/${after.id}`,
         },
         // @link https://developers.google.com/calendar/extended-properties
         extendedProperties: {
