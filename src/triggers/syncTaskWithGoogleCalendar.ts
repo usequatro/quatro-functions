@@ -2,6 +2,7 @@ import * as functions from 'firebase-functions';
 import { google } from 'googleapis';
 
 import formatISO from 'date-fns/formatISO';
+import cond from 'lodash/cond';
 
 import REGION from '../constants/region';
 import { Task } from '../types';
@@ -15,7 +16,6 @@ const areCalendarEventFieldsDifferent = (taskA: Task, taskB: Task) =>
   Boolean(
     taskA.title !== taskB.title ||
       taskA.description !== taskB.description ||
-      taskA.completed !== taskB.completed ||
       taskA.calendarBlockStart !== taskB.calendarBlockStart ||
       taskA.calendarBlockEnd !== taskB.calendarBlockEnd,
   );
@@ -42,7 +42,13 @@ const updateCalendarWatcherTime = (calendarId: string, userId: string) =>
     });
   });
 
-const processEventCreation = async (userId: string, after: TaskWrapper) => {
+enum CreationReason {
+  TaskJustCreated = 'taskJustCreated',
+  CalendarBlockJustSet = 'calendarBlockJustSet',
+  AfterMarkedIncomplete = 'afterMarkedIncomplete',
+}
+
+const processEventCreation = async (userId: string, after: TaskWrapper, reason: CreationReason) => {
   const calendarId = after.data.calendarBlockCalendarId;
   if (!calendarId) {
     throw new Error('No after.data.calendarBlockCalendarId when creating event');
@@ -71,6 +77,12 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
           title: 'Quatro',
           url: 'https://usequatro.com', // @TODO: add reliable URL for editing task here
         },
+        // @link https://developers.google.com/calendar/extended-properties
+        extendedProperties: {
+          private: {
+            taskId: after.id,
+          },
+        },
         status: 'confirmed',
         transparency: 'opaque',
         visibility: 'private',
@@ -84,6 +96,7 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
       await updateCalendarWatcherTime(calendarId, userId);
 
       functions.logger.info('Processed Google Calendar event creation', {
+        reason,
         googleCalendarEventId: eventId,
         userId,
         taskId: after.id,
@@ -91,6 +104,7 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
     })
     .catch((error) => {
       functions.logger.error('Error response from events.insert', {
+        reason,
         providerCalendarId,
         userId,
         taskId: after.id,
@@ -101,16 +115,24 @@ const processEventCreation = async (userId: string, after: TaskWrapper) => {
     });
 };
 
+enum DeletionReason {
+  TaskDeleted = 'taskDeleted',
+  CalendarBlockNotSet = 'calendarBlockNotSet',
+  TaskCompleted = 'taskCompleted',
+}
+
 const processEventDeletion = async (
   userId: string,
   before: TaskWrapper,
   after: TaskWrapper | null,
+  reason: DeletionReason,
 ) => {
   const calendarId = before.data.calendarBlockCalendarId;
   if (!calendarId) {
     throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
   }
-  if (!before.data.calendarBlockProviderEventId) {
+  const providerEventId = before.data.calendarBlockProviderEventId;
+  if (!providerEventId) {
     throw new Error(`No before.data.calendarBlockProviderEventId in task ${before.id}`);
   }
 
@@ -124,7 +146,7 @@ const processEventDeletion = async (
   // @link https://developers.google.com/calendar/v3/reference/events/delete
   return calendar.events
     .delete({
-      eventId: before.data.calendarBlockProviderEventId,
+      eventId: providerEventId,
       calendarId: providerCalendarId,
     })
     .then(async () => {
@@ -135,22 +157,29 @@ const processEventDeletion = async (
       ) {
         await updateTask(after.id, {
           calendarBlockProviderEventId: null,
-          calendarBlockCalendarId: null,
+
+          // we could nullify these in case the task was completed, but we don't need to
+          // let's keep them to re-create the event if the task is mark incomplete later
+          // calendarBlockEnd: null,
+          // calendarBlockStart: null,
+          // calendarBlockCalendarId: null,
         });
 
         // Update watcher time so client refreshes the events list
         await updateCalendarWatcherTime(calendarId, userId);
       }
       functions.logger.info('Processed Google Calendar event deletion', {
-        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        reason,
+        googleCalendarEventId: providerEventId,
         userId,
         taskId: before.id,
       });
     })
     .catch((error) => {
       functions.logger.error('Error response from events.delete', {
+        reason,
         providerCalendarId,
-        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        googleCalendarEventId: providerEventId,
         userId,
         taskId: before.id,
         errorMessage: error.message,
@@ -288,24 +317,42 @@ export default functions
       );
     }
 
+    // functions.logger.info('Debug after and before', { after, before });
+
     // Deletion
-    if (
-      before &&
-      before.data.calendarBlockCalendarId &&
-      before.data.calendarBlockProviderEventId &&
-      (!after || !taskHasCalendarBlock(after.data))
-    ) {
-      return processEventDeletion(userId, before, after);
+    if (before && before.data.calendarBlockCalendarId && before.data.calendarBlockProviderEventId) {
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
+      const reason: DeletionReason | undefined = cond([
+        [() => !after, () => DeletionReason.TaskDeleted],
+        [() => !taskHasCalendarBlock(after!.data), () => DeletionReason.CalendarBlockNotSet],
+        [
+          () => Boolean(!before.data.completed && after!.data.completed),
+          () => DeletionReason.TaskCompleted,
+        ],
+      ])(undefined);
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
+      if (reason) {
+        return processEventDeletion(userId, before, after, reason);
+      }
     }
 
     // Creation
     if (
-      (!before || !taskHasCalendarBlock(before.data)) &&
       after &&
       after.data.calendarBlockCalendarId &&
+      !after.data.calendarBlockProviderEventId &&
       taskHasCalendarBlock(after.data)
     ) {
-      return processEventCreation(userId, after);
+      /* eslint-disable @typescript-eslint/no-non-null-assertion */
+      const reason: CreationReason | undefined = cond([
+        [() => !before, () => CreationReason.TaskJustCreated],
+        [() => !taskHasCalendarBlock(before!.data), () => CreationReason.CalendarBlockJustSet],
+        [() => !after.data.completed, () => CreationReason.AfterMarkedIncomplete],
+      ])(undefined);
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
+      if (reason) {
+        return processEventCreation(userId, after, reason);
+      }
     }
 
     // Moving to different calendar
