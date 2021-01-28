@@ -10,6 +10,8 @@ import { update as updateTask } from '../repositories/tasks';
 import { getCalendarById, updateCalendar } from '../repositories/calendars';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
+const { hostname } = functions.config().app || {};
+
 type TaskWrapper = { id: string; data: Task };
 
 const areCalendarEventFieldsDifferent = (taskA: Task, taskB: Task) =>
@@ -75,7 +77,7 @@ const processEventCreation = async (userId: string, after: TaskWrapper, reason: 
         },
         source: {
           title: 'Quatro',
-          url: `https://usequatro.com/task/${after.id}`,
+          url: `https://${hostname}/task/${after.id}`,
         },
         // @link https://developers.google.com/calendar/extended-properties
         extendedProperties: {
