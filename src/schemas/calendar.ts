@@ -1,11 +1,12 @@
 import { string, valid, object, number } from 'joi';
+import { CalendarProviders } from '../constants/calendarProviders';
 
 export interface Calendar {
   userId: string;
   providerCalendarId: string;
   providerUserId: string;
   providerUserEmail: string;
-  provider: 'google';
+  provider: CalendarProviders;
   color: string;
   name: string;
   watcherChannelId?: string | null;
@@ -20,7 +21,7 @@ export const calendarSchema = object({
   providerCalendarId: string(),
   providerUserId: string(),
   providerUserEmail: string(),
-  provider: valid('google'),
+  provider: valid(CalendarProviders.Google),
   color: string(),
   name: string(),
   watcherChannelId: string().allow(null),

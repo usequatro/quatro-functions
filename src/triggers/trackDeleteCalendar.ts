@@ -9,6 +9,8 @@ import {
 } from '../repositories/calendars';
 import { getUserInternalConfig } from '../repositories/userInternalConfigs';
 import REGION from '../constants/region';
+import { getUserExternalConfig, setUserExternalConfig } from '../repositories/userExternalConfigs';
+import { findIncompleteByCalendarBlockCalendarId, update } from '../repositories/tasks';
 
 export default functions
   .region(REGION)
@@ -16,6 +18,36 @@ export default functions
   .onDelete(async (change) => {
     const { userId } = change.data() as Calendar;
 
+    // Clear user's default calendar ID if it was this one
+    const userExternalConfig = await getUserExternalConfig(userId);
+    if (userExternalConfig?.defaultCalendarId === change.id) {
+      await setUserExternalConfig(userId, { defaultCalendarId: null });
+      functions.logger.info('Cleared default calendar ID', {
+        userId,
+        deletedCalendarId: change.id,
+        previousDefaultCalendarId: userExternalConfig?.defaultCalendarId,
+      });
+    }
+
+    // Clear calendar blocks from tasks linked to this calendar
+    const pairs = await findIncompleteByCalendarBlockCalendarId(userId, change.id);
+    for (const [id] of pairs) {
+      await update(id, {
+        calendarBlockStart: null,
+        calendarBlockEnd: null,
+        calendarBlockCalendarId: null,
+        calendarBlockProvider: null,
+        calendarBlockProviderCalendarId: null,
+        calendarBlockProviderEventId: null,
+      });
+    }
+    functions.logger.info('Removed calendar blocks for tasks linked to deleted calendar', {
+      userId,
+      deletedCalendarId: change.id,
+      taskIds: pairs.map(([id]) => id),
+    });
+
+    // Update ActiveCampaign
     const calendarsCount = await findUserCalendarsCount(userId);
     const newCount = calendarsCount > 0 ? calendarsCount - 1 : 0;
 
@@ -37,8 +69,8 @@ export default functions
       },
     });
     functions.logger.info('Updated ActiveCampaign contact with calendar count', {
-      activeCampaignContactId,
       userId,
+      activeCampaignContactId,
       newCount,
     });
   });

@@ -3,7 +3,7 @@
  */
 
 import admin from 'firebase-admin';
-import { Task } from '../types';
+import { Task, taskSchema } from '../schemas/task';
 
 const COLLECTION = 'tasks';
 
@@ -47,23 +47,49 @@ export const findLastByRecurringConfigId = async (
     : [null, null];
 };
 
-export const create = async (userId: string, task: Task): Promise<[string, Task]> => {
-  const finalTask: Task = {
-    ...KEY_DEFAULTS,
-    ...task,
-    created: Date.now(),
-    userId,
-  };
-
+export const findIncompleteByCalendarBlockCalendarId = async (
+  userId: string,
+  calendarBlockCalendarId: string,
+): Promise<Array<[string, Task]>> => {
   const db = admin.firestore();
 
-  const docRef = await db.collection(COLLECTION).add(finalTask);
+  const query = db
+    .collection(COLLECTION)
+    .where('userId', '==', userId)
+    .where('calendarBlockCalendarId', '==', calendarBlockCalendarId)
+    .where('completed', '==', null)
+    .limit(1000); // high limit that likely won't be reached
+  const querySnapshot = await query.get();
+
+  return querySnapshot.docs.map((doc) => [doc.id, <Task>doc.data()]);
+};
+
+export const create = async (userId: string, task: Task): Promise<[string, Task]> => {
+  const validPayload = await taskSchema.validateAsync(
+    {
+      ...KEY_DEFAULTS,
+      ...task,
+      created: Date.now(),
+      userId,
+    },
+    {
+      stripUnknown: true,
+      noDefaults: true,
+    },
+  );
+
+  const db = admin.firestore();
+  const docRef = await db.collection(COLLECTION).add(validPayload);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data() as Task];
 };
 
 export const update = async (id: string, task: Partial<Task>): Promise<undefined> => {
+  const validPayload = await taskSchema.validateAsync(task, {
+    stripUnknown: true,
+    noDefaults: true,
+  });
   const db = admin.firestore();
-  await db.collection(COLLECTION).doc(id).update(task);
+  await db.collection(COLLECTION).doc(id).update(validPayload);
   return;
 };

@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
+import { CalendarProviders } from '../constants/calendarProviders';
 
 import { calendarSchema, Calendar } from '../schemas/calendar';
 
@@ -61,7 +62,7 @@ export const findCalendarsWithExpiringGoogleCalendarChannel = async (
   const querySnapshot = await admin
     .firestore()
     .collection(COLLECTION)
-    .where('provider', '==', 'google')
+    .where('provider', '==', CalendarProviders.Google)
     .where('watcherExpiration', '<=', targetWatcherExpiration)
     .limit(500) // insane limit
     .get();

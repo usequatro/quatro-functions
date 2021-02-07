@@ -33,30 +33,6 @@ export type RecurringConfig = {
   activeWeekdays?: ActiveWeekdays;
 };
 
-export enum TaskSources {
-  User = 'user',
-  Repeat = 'repeat',
-}
-
-export type Task = {
-  title: string;
-  effort: number;
-  impact: number;
-  blockedBy?: Array<string>;
-  completed?: number | null;
-  created?: number | null;
-  description?: string | null;
-  due?: number | null;
-  scheduledStart?: number | null;
-  userId?: string;
-  recurringConfigId?: string | null;
-  source?: TaskSources;
-  calendarBlockCalendarId?: string | null;
-  calendarBlockProviderEventId?: string | null;
-  calendarBlockStart?: number | null;
-  calendarBlockEnd?: number | null;
-};
-
 export type User = {
   uid: string;
 };
