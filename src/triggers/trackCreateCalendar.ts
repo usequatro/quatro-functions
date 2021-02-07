@@ -11,6 +11,7 @@ import {
 } from '../repositories/calendars';
 import { Calendar } from '../schemas/calendar';
 import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
+import { CalendarProviders } from '../constants/calendarProviders';
 
 const addGoogleTagToContact = (activeCampaignContactId: string): Promise<AcContactTagResponse> => {
   const contactTagPayload: AcContactTagPayload = {
@@ -57,7 +58,7 @@ export default functions
     // This will only happen in case the user started using password but added a google account later on.
     // Tag the user as having signed up with Google
     if (
-      provider === 'google' &&
+      provider === CalendarProviders.Google &&
       !providersSentToActiveCampaign.includes(FIREBASE_AUTH_GOOGLE_PROVIDER_ID)
     ) {
       const signedUpWithGoogle = await getUserHasSignedUpWithGoogleToFirebaseAuth(userId);

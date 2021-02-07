@@ -8,6 +8,7 @@ import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars
 import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
 import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
 import { updateUserExternalConfig } from '../repositories/userExternalConfigs';
+import { CalendarProviders } from '../constants/calendarProviders';
 
 cors({ origin: true });
 
@@ -144,7 +145,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
       // Remove calendars
       const userCalendars = await findCalendarsByUserId(context.auth.uid);
       const googleCalendars = userCalendars.filter(
-        ([, calendar]) => calendar.provider === 'google',
+        ([, calendar]) => calendar.provider === CalendarProviders.Google,
       );
 
       if (googleCalendars.length === 0) {
