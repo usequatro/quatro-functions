@@ -225,6 +225,10 @@ const processEventDeletion = async (
       });
     })
     .catch((error) => {
+      // If the event was actually already deleted, all good, nothing to complain about, dude
+      if (error.errors && error.errors[0]?.reason === 'deleted') {
+        return;
+      }
       functions.logger.error('Error response from events.delete', {
         reason,
         providerCalendarId,
@@ -279,6 +283,7 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
         end: {
           dateTime: formatISO(after.data.calendarBlockEnd || 0),
         },
+        status: 'confirmed',
         extendedProperties: buildExtendedProperties(after.id),
       },
     })
