@@ -5,7 +5,10 @@ import cors from 'cors';
 import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
 import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
-import { getUserInternalConfig, setUserInternalConfig } from '../repositories/userInternalConfigs';
+import {
+  getUserInternalConfig,
+  updateUserInternalConfig,
+} from '../repositories/userInternalConfigs';
 import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
 import { updateUserExternalConfig } from '../repositories/userExternalConfigs';
 import { CalendarProviders } from '../constants/calendarProviders';
@@ -77,8 +80,14 @@ const removeActiveCampaignProviderTag = async (userId: string, providerId: strin
     const providersWithoutGoogle = userInternalConfig?.providersSentToActiveCampaign?.filter(
       (provider) => provider !== providerId,
     );
-    await setUserInternalConfig(userId, {
+    await updateUserInternalConfig(userId, {
       providersSentToActiveCampaign: providersWithoutGoogle,
+    }).catch((error) => {
+      // An error updating could mean the entity doesn't exist. We let this go through
+      functions.logger.error('Error updating user internal config', {
+        userId,
+        error: error,
+      });
     });
   } catch (error) {
     functions.logger.error('Error in ActiveCampaign contact tag cleaning', {
@@ -137,6 +146,17 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
       }).catch((error) => {
         // An error updating could mean the entity doesn't exist. We let this go through
         functions.logger.error('Error updating user external config', {
+          userId,
+          error: error,
+        });
+      });
+
+      await updateUserInternalConfig(context.auth.uid, {
+        gapiRefreshToken: null,
+        gapiAccessToken: null,
+      }).catch((error) => {
+        // An error updating could mean the entity doesn't exist. We let this go through
+        functions.logger.error('Error updating user internal config', {
           userId,
           error: error,
         });
