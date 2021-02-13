@@ -41,11 +41,16 @@ export default functions
         calendarBlockProviderEventId: null,
       });
     }
-    functions.logger.info('Removed calendar blocks for tasks linked to deleted calendar', {
-      userId,
-      deletedCalendarId: change.id,
-      taskIds: pairs.map(([id]) => id),
-    });
+    functions.logger.info(
+      pairs.length > 0
+        ? 'Removed calendar blocks for tasks linked to deleted calendar'
+        : 'No calendar blocks to remove for tasks linked to deleted calendar',
+      {
+        userId,
+        deletedCalendarId: change.id,
+        taskIds: pairs.map(([id]) => id),
+      },
+    );
 
     // Update ActiveCampaign
     const calendarsCount = await findUserCalendarsCount(userId);
