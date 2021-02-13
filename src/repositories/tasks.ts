@@ -30,6 +30,15 @@ export const findById = async (id: string): Promise<Task | undefined> => {
   return docSnapshot.exists ? <Task>docSnapshot.data() : undefined;
 };
 
+export const findTasksByUserId = async (userId: string): Promise<[string, Task][]> => {
+  const snapshot = await admin
+    .firestore()
+    .collection(COLLECTION)
+    .where('userId', '==', userId)
+    .get();
+  return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
+};
+
 export const findLastByRecurringConfigId = async (
   recurringConfigId: string,
 ): Promise<[string, Task] | [null, null]> => {
@@ -93,3 +102,6 @@ export const update = async (id: string, task: Partial<Task>): Promise<undefined
   await db.collection(COLLECTION).doc(id).update(validPayload);
   return;
 };
+
+export const deleteTask = (id: string): Promise<FirebaseFirestore.WriteResult> =>
+  admin.firestore().collection(COLLECTION).doc(id).delete();

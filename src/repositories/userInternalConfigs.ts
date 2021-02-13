@@ -28,5 +28,16 @@ export const setUserInternalConfig = async (
     .set(validatedPayload, { merge: true });
 };
 
+export const updateUserInternalConfig = async (
+  userId: string,
+  payload: Partial<UserInternalConfig>,
+): Promise<WriteResult> => {
+  const validatedPayload = await userInternalConfigSchema.validateAsync(payload, {
+    stripUnknown: true,
+    noDefaults: true,
+  });
+  return admin.firestore().collection(COLLECTION).doc(userId).update(validatedPayload);
+};
+
 export const deleteUserInternalConfig = async (userId: string): Promise<WriteResult> =>
   admin.firestore().collection(COLLECTION).doc(userId).delete();

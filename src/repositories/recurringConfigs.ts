@@ -30,6 +30,17 @@ export const findById = async (id: string): Promise<RecurringConfig | undefined>
   return docSnapshot.exists ? <RecurringConfig>docSnapshot.data() : undefined;
 };
 
+export const findRecurringConfigsByUserId = async (
+  userId: string,
+): Promise<[string, RecurringConfig][]> => {
+  const snapshot = await admin
+    .firestore()
+    .collection(COLLECTION)
+    .where('userId', '==', userId)
+    .get();
+  return snapshot.docs.map((doc) => [doc.id, doc.data() as RecurringConfig]);
+};
+
 export const create = async (
   userId: string,
   entity: RecurringConfig,
@@ -56,3 +67,6 @@ export const update = async (
   await docRef.set(updates, { merge: true });
   return;
 };
+
+export const deleteRecurringConfig = (id: string): Promise<FirebaseFirestore.WriteResult> =>
+  admin.firestore().collection(COLLECTION).doc(id).delete();

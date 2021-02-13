@@ -6,8 +6,8 @@ export interface UserInternalConfig {
   providersSentToActiveCampaign?: string[];
 
   // gapi credentials for interacting with user's calendar from backend
-  gapiRefreshToken?: string;
-  gapiAccessToken?: string;
+  gapiRefreshToken?: string | null;
+  gapiAccessToken?: string | null;
 }
 
 export const userInternalConfigSchema = object({
