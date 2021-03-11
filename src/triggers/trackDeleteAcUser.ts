@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions';
 
-import { deleteContact } from '../utils/activeCampaignApi';
+// import { deleteContact } from '../utils/activeCampaignApi';
 import REGION from '../constants/region';
 import {
   deleteUserInternalConfig,
-  getUserInternalConfig,
+  // getUserInternalConfig,
 } from '../repositories/userInternalConfigs';
 import { deleteUserExternalConfig } from '../repositories/userExternalConfigs';
 import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
@@ -21,28 +21,28 @@ export default functions
   .onDelete(async (user) => {
     const { uid } = user;
 
-    const userInternalConfig = await getUserInternalConfig(uid);
-    if (userInternalConfig) {
-      const { activeCampaignContactId } = userInternalConfig;
-      if (activeCampaignContactId) {
-        await deleteContact(activeCampaignContactId);
-        functions.logger.info('Deleted ActiveCampaign contact for user', {
-          userId: user.uid,
-          userEmail: user.email,
-          activeCampaignContactId,
-        });
-      } else {
-        functions.logger.info('Skipping because no ActiveCampaign contact ID', {
-          userId: user.uid,
-          userEmail: user.email,
-        });
-      }
-    } else {
-      functions.logger.info('Skipping AC deletion because user internal config not found', {
-        userId: user.uid,
-        userEmail: user.email,
-      });
-    }
+    // const userInternalConfig = await getUserInternalConfig(uid);
+    // if (userInternalConfig) {
+    //   const { activeCampaignContactId } = userInternalConfig;
+    //   if (activeCampaignContactId) {
+    //     await deleteContact(activeCampaignContactId);
+    //     functions.logger.info('Deleted ActiveCampaign contact for user', {
+    //       userId: user.uid,
+    //       userEmail: user.email,
+    //       activeCampaignContactId,
+    //     });
+    //   } else {
+    //     functions.logger.info('Skipping because no ActiveCampaign contact ID', {
+    //       userId: user.uid,
+    //       userEmail: user.email,
+    //     });
+    //   }
+    // } else {
+    //   functions.logger.info('Skipping AC deletion because user internal config not found', {
+    //     userId: user.uid,
+    //     userEmail: user.email,
+    //   });
+    // }
 
     await deleteUserInternalConfig(uid);
     await deleteUserExternalConfig(uid);

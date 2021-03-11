@@ -11,9 +11,9 @@ import processProviderUnlink from './callable/processProviderUnlink';
 import storeAuthCode from './callable/storeAuthCode';
 import createRecurringTasks from './scheduled/createRecurringTasks';
 import renewGoogleCalendarWatchers from './scheduled/renewGoogleCalendarWatchers';
-import trackNewAcUser from './triggers/trackNewAcUser';
+// import trackNewAcUser from './triggers/trackNewAcUser';
 import trackDeleteAcUser from './triggers/trackDeleteAcUser';
-import trackCreateCalendar from './triggers/trackCreateCalendar';
+// import trackCreateCalendar from './triggers/trackCreateCalendar';
 import trackDeleteCalendar from './triggers/trackDeleteCalendar';
 import syncTaskWithGoogleCalendar from './triggers/syncTaskWithGoogleCalendar';
 import watchCalendar from './triggers/watchCalendar';
@@ -35,9 +35,9 @@ export {
   createRecurringTasks,
   renewGoogleCalendarWatchers,
   // triggers
-  trackNewAcUser,
+  // trackNewAcUser,
   trackDeleteAcUser,
-  trackCreateCalendar,
+  // trackCreateCalendar,
   trackDeleteCalendar,
   syncTaskWithGoogleCalendar,
   watchCalendar,

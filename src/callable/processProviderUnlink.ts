@@ -2,14 +2,14 @@ import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 import cors from 'cors';
 
-import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
+// import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../constants/region';
 import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
 import {
-  getUserInternalConfig,
+  // getUserInternalConfig,
   updateUserInternalConfig,
 } from '../repositories/userInternalConfigs';
-import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
+// import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
 import { updateUserExternalConfig } from '../repositories/userExternalConfigs';
 import { CalendarProviders } from '../constants/calendarProviders';
 
@@ -32,71 +32,71 @@ const deleteCalendars = async (calendarIds: string[]) => {
   }
 };
 
-const removeActiveCampaignProviderTag = async (userId: string, providerId: string) => {
-  const providerIdToActiveCampaignTagId: { [key: string]: string } = {
-    'google.com': SIGNED_GOOGLE_TAG.id,
-  };
-  const activeCampaignTagIdToRemove = providerIdToActiveCampaignTagId[providerId];
+// const removeActiveCampaignProviderTag = async (userId: string, providerId: string) => {
+//   const providerIdToActiveCampaignTagId: { [key: string]: string } = {
+//     'google.com': SIGNED_GOOGLE_TAG.id,
+//   };
+//   const activeCampaignTagIdToRemove = providerIdToActiveCampaignTagId[providerId];
 
-  if (!activeCampaignTagIdToRemove) {
-    functions.logger.error('ActiveCampaign tag not found for provider', {
-      userId: userId,
-      unlinkedProviderId: providerId,
-      providerIdToActiveCampaignTagId,
-    });
-    return;
-  }
+//   if (!activeCampaignTagIdToRemove) {
+//     functions.logger.error('ActiveCampaign tag not found for provider', {
+//       userId: userId,
+//       unlinkedProviderId: providerId,
+//       providerIdToActiveCampaignTagId,
+//     });
+//     return;
+//   }
 
-  const userInternalConfig = await getUserInternalConfig(userId);
-  if (!userInternalConfig || !userInternalConfig.activeCampaignContactId) {
-    functions.logger.info('No ActiveCampaign contact to remove a contact tag from', {
-      userId: userId,
-      unlinkedProviderId: providerId,
-    });
-    return;
-  }
+//   const userInternalConfig = await getUserInternalConfig(userId);
+//   if (!userInternalConfig || !userInternalConfig.activeCampaignContactId) {
+//     functions.logger.info('No ActiveCampaign contact to remove a contact tag from', {
+//       userId: userId,
+//       unlinkedProviderId: providerId,
+//     });
+//     return;
+//   }
 
-  try {
-    const response = await getContactTagsForContact(userInternalConfig.activeCampaignContactId);
-    const googleContactTag = (response.contactTags || []).find(
-      (contactTag) => contactTag.tag === activeCampaignTagIdToRemove,
-    );
+//   try {
+//     const response = await getContactTagsForContact(userInternalConfig.activeCampaignContactId);
+//     const googleContactTag = (response.contactTags || []).find(
+//       (contactTag) => contactTag.tag === activeCampaignTagIdToRemove,
+//     );
 
-    if (googleContactTag) {
-      await deleteTagFromContact(googleContactTag.id);
-      functions.logger.info('ActiveCampaign contact tag removed', {
-        userId: userId,
-        unlinkedProviderId: providerId,
-        contactTag: googleContactTag,
-      });
-    } else {
-      functions.logger.info('No contact tag to remove from ActiveCampaign', {
-        userId: userId,
-        unlinkedProviderId: providerId,
-        contactTags: response.contactTags,
-      });
-    }
+//     if (googleContactTag) {
+//       await deleteTagFromContact(googleContactTag.id);
+//       functions.logger.info('ActiveCampaign contact tag removed', {
+//         userId: userId,
+//         unlinkedProviderId: providerId,
+//         contactTag: googleContactTag,
+//       });
+//     } else {
+//       functions.logger.info('No contact tag to remove from ActiveCampaign', {
+//         userId: userId,
+//         unlinkedProviderId: providerId,
+//         contactTags: response.contactTags,
+//       });
+//     }
 
-    const providersWithoutGoogle = userInternalConfig?.providersSentToActiveCampaign?.filter(
-      (provider) => provider !== providerId,
-    );
-    await updateUserInternalConfig(userId, {
-      providersSentToActiveCampaign: providersWithoutGoogle,
-    }).catch((error) => {
-      // An error updating could mean the entity doesn't exist. We let this go through
-      functions.logger.error('Error updating user internal config', {
-        userId,
-        error: error,
-      });
-    });
-  } catch (error) {
-    functions.logger.error('Error in ActiveCampaign contact tag cleaning', {
-      userId: userId,
-      unlinkedProviderId: providerId,
-      error,
-    });
-  }
-};
+//     const providersWithoutGoogle = userInternalConfig?.providersSentToActiveCampaign?.filter(
+//       (provider) => provider !== providerId,
+//     );
+//     await updateUserInternalConfig(userId, {
+//       providersSentToActiveCampaign: providersWithoutGoogle,
+//     }).catch((error) => {
+//       // An error updating could mean the entity doesn't exist. We let this go through
+//       functions.logger.error('Error updating user internal config', {
+//         userId,
+//         error: error,
+//       });
+//     });
+//   } catch (error) {
+//     functions.logger.error('Error in ActiveCampaign contact tag cleaning', {
+//       userId: userId,
+//       unlinkedProviderId: providerId,
+//       error,
+//     });
+//   }
+// };
 
 /**
  * @link https://developers.google.com/identity/sign-in/web/server-side-flow
@@ -145,7 +145,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
         gapiCalendarOfflineAccess: false,
       }).catch((error) => {
         // An error updating could mean the entity doesn't exist. We let this go through
-        functions.logger.error('Error updating user external config', {
+        functions.logger.info("Couldn't update user external config", {
           userId,
           error: error,
         });
@@ -156,7 +156,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
         gapiAccessToken: null,
       }).catch((error) => {
         // An error updating could mean the entity doesn't exist. We let this go through
-        functions.logger.error('Error updating user internal config', {
+        functions.logger.info("Couldn't update user internal config", {
           userId,
           error: error,
         });
@@ -181,7 +181,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
       await deleteCalendars(googleCalendars.map(([id]) => id));
 
       // Remove tag from Active Campaign
-      await removeActiveCampaignProviderTag(context.auth.uid, data.unlinkedProviderId);
+      // await removeActiveCampaignProviderTag(context.auth.uid, data.unlinkedProviderId);
 
       break;
     }
