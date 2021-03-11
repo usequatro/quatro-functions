@@ -1,8 +1,8 @@
 import sub from 'date-fns/sub';
 import startOfWeek from 'date-fns/startOfWeek';
 import set from 'date-fns/set';
-import startOfYear from 'date-fns/startOfYear';
-import differenceInMinutes from 'date-fns/differenceInMinutes';
+import format from 'date-fns/format';
+import parse from 'date-fns/parse';
 
 import { DurationUnits, DaysOfWeek } from '../types';
 import { applies, getNewScheduledStart } from './createRecurringTasks';
@@ -120,23 +120,21 @@ describe('createRecurringTasks', () => {
 
   describe('#getNewScheduledStart', () => {
     it('should set the scheduled start to today', () => {
-      const now = Date.now();
-      const januaryFirst = startOfYear(now);
-      const oneWeekAgo = sub(now, { days: 7 }).getTime();
-      const newScheduledStart = getNewScheduledStart(oneWeekAgo, now);
-      expect(differenceInMinutes(newScheduledStart, januaryFirst)).toBe(
-        differenceInMinutes(now, januaryFirst),
-      );
+      const now = parse('2021-03-15 09:05:02', 'yyyy-MM-dd HH:mm:ss', new Date()).getTime();
+      const march12 = parse('2021-03-12 08:00:00', 'yyyy-MM-dd HH:mm:ss', new Date()).getTime();
+
+      const newScheduledStart = getNewScheduledStart(march12, now);
+
+      expect(format(newScheduledStart, 'yyyy-MM-dd HH:mm:ss')).toBe('2021-03-15 08:00:00');
     });
 
     it('should set the scheduled start to today even across years', () => {
-      const now = Date.now();
-      const januaryFirst = startOfYear(now);
-      const overAYearAgo = sub(now, { days: 400 }).getTime();
-      const newScheduledStart = getNewScheduledStart(overAYearAgo, now);
-      expect(differenceInMinutes(newScheduledStart, januaryFirst)).toBe(
-        differenceInMinutes(now, januaryFirst),
-      );
+      const now = parse('2021-01-03 00:05:00', 'yyyy-MM-dd HH:mm:ss', new Date()).getTime();
+      const december28 = parse('2020-12-28 12:00:00', 'yyyy-MM-dd HH:mm:ss', new Date()).getTime();
+
+      const newScheduledStart = getNewScheduledStart(december28, now);
+
+      expect(format(newScheduledStart, 'yyyy-MM-dd HH:mm:ss')).toBe('2021-01-03 12:00:00');
     });
   });
 });
