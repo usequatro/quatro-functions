@@ -145,7 +145,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
         gapiCalendarOfflineAccess: false,
       }).catch((error) => {
         // An error updating could mean the entity doesn't exist. We let this go through
-        functions.logger.error('Error updating user external config', {
+        functions.logger.info("Couldn't update user external config", {
           userId,
           error: error,
         });
@@ -156,7 +156,7 @@ export default functions.region(REGION).https.onCall(async (data, context) => {
         gapiAccessToken: null,
       }).catch((error) => {
         // An error updating could mean the entity doesn't exist. We let this go through
-        functions.logger.error('Error updating user internal config', {
+        functions.logger.info("Couldn't update user internal config", {
           userId,
           error: error,
         });
