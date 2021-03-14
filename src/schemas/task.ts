@@ -1,10 +1,5 @@
 import Joi from 'joi';
 
-export enum TaskSources {
-  User = 'user',
-  Repeat = 'repeat',
-}
-
 export enum TaskBlockedByTypes {
   Task = 'task',
   FreeText = 'freeText',
@@ -22,7 +17,6 @@ export type Task = {
   scheduledStart?: number | null;
   userId?: string;
   recurringConfigId?: string | null;
-  source?: TaskSources;
 
   calendarBlockCalendarId?: string | null;
   calendarBlockStart?: number | null;

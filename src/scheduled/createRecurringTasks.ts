@@ -26,7 +26,6 @@ import setYear from 'date-fns/setYear';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
 import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types';
-import { TaskSources } from '../schemas/task';
 
 export const applies = (
   recurringConfig: RecurringConfig,
@@ -212,9 +211,8 @@ export default functions.pubsub
           due: newDue,
           completed: null,
           recurringConfigId: rcId,
-          source: TaskSources.Repeat,
         };
-        const [newTaskId] = await create(taskUserId, newTask);
+        const newTaskId = await create(taskUserId, newTask);
 
         await updateRecurringConfig(rcId, {
           // update lastRunDate so that we don't create duplicates for the same day

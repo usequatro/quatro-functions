@@ -5,10 +5,7 @@ import sendSlackResponse from './sendSlackResponse';
 import { findBySlackUserId } from '../repositories/users';
 
 const handleCreateTask = async (req: Request, res: Response): Promise<Response> => {
-  const {
-    text,
-    user_id: slackUserId,
-  } = req.body;
+  const { text, user_id: slackUserId } = req.body;
 
   try {
     const matches = /^\s*["“”]([^"“”]+)["“”] ([0-9]+) ([0-9]+)\s*$/.exec(text) || [];
@@ -31,7 +28,7 @@ const handleCreateTask = async (req: Request, res: Response): Promise<Response> 
 
     const [userId] = await findBySlackUserId(slackUserId);
 
-    const [taskId] = await create(userId, {
+    const taskId = await create(userId, {
       title,
       impact: parseInt(impact, 10),
       effort: parseInt(effort, 10),
@@ -39,7 +36,10 @@ const handleCreateTask = async (req: Request, res: Response): Promise<Response> 
 
     console.log(`[POST slack/task] Task created. id=${taskId}`);
 
-    return sendSlackResponse(res, `Task created! "${title}" with impact ${impact} and effort ${effort}`);
+    return sendSlackResponse(
+      res,
+      `Task created! "${title}" with impact ${impact} and effort ${effort}`,
+    );
   } catch (error) {
     console.log(`[POST slack/task] Task create error. message=${error.message}`);
     return sendSlackResponse(res, `Error: ${error.message}`);
