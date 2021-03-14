@@ -73,7 +73,7 @@ export const findIncompleteByCalendarBlockCalendarId = async (
   return querySnapshot.docs.map((doc) => [doc.id, <Task>doc.data()]);
 };
 
-export const create = async (userId: string, task: Task): Promise<[string, Task]> => {
+export const create = async (userId: string, task: Task): Promise<string> => {
   const validPayload = await taskSchema.validateAsync(
     {
       ...KEY_DEFAULTS,
@@ -89,8 +89,7 @@ export const create = async (userId: string, task: Task): Promise<[string, Task]
 
   const db = admin.firestore();
   const docRef = await db.collection(COLLECTION).add(validPayload);
-  const docSnapshot = await docRef.get();
-  return [docSnapshot.id, docSnapshot.data() as Task];
+  return docRef.id;
 };
 
 export const update = async (id: string, task: Partial<Task>): Promise<undefined> => {
