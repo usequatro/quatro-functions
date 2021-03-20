@@ -12,7 +12,6 @@ import storeAuthCode from './callable/storeAuthCode';
 import createRecurringTasks from './scheduled/createRecurringTasks';
 import renewGoogleCalendarWatchers from './scheduled/renewGoogleCalendarWatchers';
 // import trackNewAcUser from './triggers/trackNewAcUser';
-import trackCreateUser from './triggers/trackCreateUser';
 import trackDeleteAcUser from './triggers/trackDeleteAcUser';
 // import trackCreateCalendar from './triggers/trackCreateCalendar';
 import trackDeleteCalendar from './triggers/trackDeleteCalendar';
@@ -37,7 +36,6 @@ export {
   renewGoogleCalendarWatchers,
   // triggers
   // trackNewAcUser,
-  trackCreateUser,
   trackDeleteAcUser,
   // trackCreateCalendar,
   trackDeleteCalendar,
