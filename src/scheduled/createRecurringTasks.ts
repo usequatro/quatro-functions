@@ -99,15 +99,17 @@ export const getNewScheduledStart = (oldScheduledStart: number, now: number): nu
 };
 
 /**
- * Scheduled task for creating recurring tasks every morning.
+ * Scheduled task for creating recurring tasks
  * Note that this functionality uses Google Cloud Pub/Sub topic and Google Cloud Scheduler, separate
  * APIs that also need to be enabled.
  * @link https://firebase.google.com/docs/functions/schedule-functions
  * @link https://crontab.guru/
  */
 export default functions.pubsub
-  .schedule('*/15 * * * *') // https://crontab.guru/every-15-minutes
+  .schedule('*/5 * * * *') // https://crontab.guru/every-5-minutes
   .onRun(async () => {
+    // @todo: make this run every minute, and the findAll exclude recurring tasks already processed recently
+    // For that, we'll need to populate lastRunDate with a null value in all of them
     const recurringConfigsResult = await findAll();
     const now = Date.now();
 
