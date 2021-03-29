@@ -15,6 +15,7 @@ export type Task = {
   description?: string | null;
   due?: number | null;
   scheduledStart?: number | null;
+  snoozedUntil?: number | null;
   userId?: string;
   recurringConfigId?: string | null;
 
@@ -38,6 +39,7 @@ export const taskSchema = Joi.object({
   // these can be empty
   due: Joi.number().allow(null),
   scheduledStart: Joi.number().allow(null),
+  snoozedUntil: Joi.number().allow(null),
   description: Joi.string().allow(''),
 
   // these can be empty and we add defaults
