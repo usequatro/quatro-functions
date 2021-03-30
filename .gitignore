@@ -65,6 +65,7 @@ node_modules/
 .env
 
 ## Compiled JavaScript files
+lib/
 **/*.js
 **/*.js.map
 

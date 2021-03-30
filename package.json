@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "scripts": {
-    "test": "jest",
+    "test": "jest src",
     "lint": "eslint . --ext .ts",
     "build": "tsc",
     "build-watch": "tsc --watch",
