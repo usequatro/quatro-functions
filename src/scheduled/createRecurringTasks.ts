@@ -106,9 +106,9 @@ export const getNewScheduledStart = (oldScheduledStart: number, now: number): nu
  * @link https://crontab.guru/
  */
 export default functions.pubsub
-  .schedule('*/5 * * * *') // https://crontab.guru/every-5-minutes
+  .schedule('* * * * *') // https://crontab.guru/every-minute
   .onRun(async () => {
-    // @todo: make this run every minute, and the findAll exclude recurring tasks already processed recently
+    // @todo: when there are many recurring configs, and the findAll exclude recurring tasks already processed recently
     // For that, we'll need to populate lastRunDate with a null value in all of them
     const recurringConfigsResult = await findAll();
     const now = Date.now();
