@@ -212,6 +212,7 @@ export default functions.pubsub
           scheduledStart: newScheduledStart,
           due: newDue,
           completed: null,
+          snoozedUntil: null,
           recurringConfigId: rcId,
         };
         const newTaskId = await create(taskUserId, newTask);
