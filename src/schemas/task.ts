@@ -6,6 +6,7 @@ export enum TaskBlockedByTypes {
 }
 
 export type Task = {
+  userId: string;
   title: string;
   effort: number;
   impact: number;
@@ -16,7 +17,6 @@ export type Task = {
   due?: number | null;
   scheduledStart?: number | null;
   snoozedUntil?: number | null;
-  userId?: string;
   recurringConfigId?: string | null;
 
   calendarBlockCalendarId?: string | null;
