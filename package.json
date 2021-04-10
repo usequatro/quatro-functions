@@ -30,6 +30,7 @@
     "joi": "^17.3.0",
     "lodash": "^4.17.20",
     "node-fetch": "^2.6.1",
+    "rrule": "^2.6.8",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

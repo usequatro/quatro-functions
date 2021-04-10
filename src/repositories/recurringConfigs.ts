@@ -30,6 +30,20 @@ export const findById = async (id: string): Promise<RecurringConfig | undefined>
   return docSnapshot.exists ? <RecurringConfig>docSnapshot.data() : undefined;
 };
 
+export const findRecurringConfigByMostRecentTaskId = async (
+  mostRecentTaskId: string,
+): Promise<[string, RecurringConfig] | undefined> => {
+  const docSnapshot = await admin
+    .firestore()
+    .collection(COLLECTION)
+    .where('mostRecentTaskId', '==', mostRecentTaskId)
+    .limit(1)
+    .get();
+  return docSnapshot.docs.length > 0
+    ? [docSnapshot.docs[0].id, <RecurringConfig>docSnapshot.docs[0].data()]
+    : undefined;
+};
+
 export const findRecurringConfigsByUserId = async (
   userId: string,
 ): Promise<[string, RecurringConfig][]> => {

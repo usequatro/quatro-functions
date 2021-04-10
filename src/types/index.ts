@@ -8,7 +8,7 @@ export enum DaysOfWeek {
   Sunday = 'sun',
 }
 
-type ActiveWeekdays = {
+export type ActiveWeekdays = {
   [DaysOfWeek.Monday]: boolean;
   [DaysOfWeek.Tuesday]: boolean;
   [DaysOfWeek.Wednesday]: boolean;
