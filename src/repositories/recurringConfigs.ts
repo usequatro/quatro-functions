@@ -3,7 +3,8 @@
  */
 
 import admin from 'firebase-admin';
-import { RecurringConfig, OptionalKeys } from '../types';
+import { RecurringConfig } from '../types/recurringConfig';
+import { recurringConfigSchema } from '../schemas/recurringConfig';
 
 const COLLECTION = 'recurringConfigs';
 
@@ -45,26 +46,32 @@ export const create = async (
   userId: string,
   entity: RecurringConfig,
 ): Promise<[string, RecurringConfig]> => {
-  const finalEntity: RecurringConfig = {
-    ...entity,
-    userId,
-  };
+  const validatedEntity = await recurringConfigSchema.validateAsync(
+    {
+      ...entity,
+      userId,
+    },
+    { stripUnknown: true, noDefaults: true },
+  );
 
   const db = admin.firestore();
 
-  const docRef = await db.collection(COLLECTION).add(finalEntity);
+  const docRef = await db.collection(COLLECTION).add(validatedEntity);
   const docSnapshot = await docRef.get();
   return [docSnapshot.id, docSnapshot.data() as RecurringConfig];
 };
 
-export const update = async (
-  rcId: string,
-  updates: OptionalKeys<RecurringConfig>,
-): Promise<void> => {
+export const update = async (rcId: string, updates: Partial<RecurringConfig>): Promise<void> => {
+  const validatedUpdates = await recurringConfigSchema.validateAsync(updates, {
+    stripUnknown: true,
+    noDefaults: true,
+    presence: 'optional',
+  });
+
   const db = admin.firestore();
 
   const docRef = await db.collection(COLLECTION).doc(rcId);
-  await docRef.set(updates, { merge: true });
+  await docRef.set(validatedUpdates, { merge: true });
   return;
 };
 

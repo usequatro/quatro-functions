@@ -1,82 +1,56 @@
-import Joi from 'joi';
-import { CalendarProviders } from '../constants/calendarProviders';
+import { object, string, number, array, alternatives, valid } from 'joi';
+import { CalendarProvider } from '../types/index';
+import { TaskBlockedByTypes } from '../types/task';
 
-export enum TaskBlockedByTypes {
-  Task = 'task',
-  FreeText = 'freeText',
-}
+export const clampNumber = (min: number, max: number) => (value: number): number =>
+  Math.min(Math.max(value, min), max);
 
-export type Task = {
-  userId: string;
-  title: string;
-  effort: number;
-  impact: number;
-  description: string;
-  due: number | null;
-  created: number | null;
-  completed: number | null;
-  scheduledStart: number | null;
-  snoozedUntil: number | null;
-  blockedBy: Array<string>;
-  recurringConfigId: string | null;
-  calendarBlockCalendarId: string | null;
-  calendarBlockStart: number | null;
-  calendarBlockEnd: number | null;
-  calendarBlockProvider: CalendarProviders | null;
-  calendarBlockProviderCalendarId: string | null;
-  calendarBlockProviderEventId: string | null;
-};
-
-const clampNumber = (min: number, max: number) => (value: number) => {
-  return Math.min(Math.max(value, min), max);
-};
-
-export const taskSchema = Joi.object({
+export const taskSchema = object({
   // these can't be empty
-  userId: Joi.string(),
-  title: Joi.string(),
+  userId: string(),
+  title: string(),
   // We clamp the number because the Firestore data could contain bigger numbers
-  effort: Joi.number().integer().custom(clampNumber(0, 3), 'clampNumber'),
-  impact: Joi.number().integer().custom(clampNumber(0, 3), 'clampNumber'),
-  created: Joi.number(),
+  effort: number().integer().custom(clampNumber(0, 3), 'clampNumber'),
+  impact: number().integer().custom(clampNumber(0, 3), 'clampNumber'),
+  created: number(),
 
   // these can be empty
-  due: Joi.number().allow(null),
-  scheduledStart: Joi.number().allow(null),
-  snoozedUntil: Joi.number().allow(null),
-  description: Joi.string().allow(''),
+  due: number().allow(null),
+  scheduledStart: number().allow(null),
+  snoozedUntil: number().allow(null),
+  description: string().allow(''),
 
   // these can be empty and we add defaults
-  completed: Joi.number().allow(null).default(null),
-  prioritizedAheadOf: Joi.string().allow(null).default(null),
-  blockedBy: Joi.array()
+  completed: number().allow(null).default(null),
+  prioritizedAheadOf: string().allow(null).default(null),
+  blockedBy: array()
     .items(
-      Joi.alternatives().try(
+      alternatives().try(
         // another task blocker
-        Joi.object({
-          config: Joi.object({
-            taskId: Joi.string(),
+        object({
+          config: object({
+            taskId: string(),
           }),
-          type: Joi.valid(TaskBlockedByTypes.Task),
+          type: valid(TaskBlockedByTypes.Task),
         }),
         // free text blocker
-        Joi.object({
-          config: Joi.object({
-            value: Joi.string(),
+        object({
+          config: object({
+            value: string(),
           }),
-          type: Joi.valid(TaskBlockedByTypes.FreeText),
+          type: valid(TaskBlockedByTypes.FreeText),
         }),
       ),
     )
     .default([]),
-  recurringConfigId: Joi.string().allow(null).default(null),
+  recurringConfigId: string().allow(null).default(null),
 
-  calendarBlockStart: Joi.number().allow(null).default(null),
-  calendarBlockEnd: Joi.number().allow(null).default(null),
-  calendarBlockCalendarId: Joi.string().allow(null).default(null),
-  calendarBlockProviderCalendarId: Joi.string().allow(null).default(null),
-  calendarBlockProvider: Joi.valid(...Object.values(CalendarProviders))
+  calendarBlockStart: number().allow(null).default(null),
+  calendarBlockEnd: number().allow(null).default(null),
+  calendarBlockCalendarId: string().allow(null).default(null),
+  calendarBlockProviderCalendarId: string().allow(null).default(null),
+  calendarBlockProvider: valid(...Object.values(CalendarProvider))
     .allow(null)
     .default(null),
-  calendarBlockProviderEventId: Joi.string().allow(null).default(null),
+  calendarBlockProviderEventId: string().allow(null).default(null),
 });

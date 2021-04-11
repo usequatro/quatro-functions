@@ -6,9 +6,9 @@ import cond from 'lodash/cond';
 
 import REGION from '../constants/region';
 import { update as updateTask } from '../repositories/tasks';
-import { Task } from '../schemas/task';
+import { Task } from '../types/task';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
-import { CalendarProviders } from '../constants/calendarProviders';
+import { CalendarProvider } from '../types/index';
 
 const { hostname } = functions.config().app || {};
 
@@ -84,7 +84,7 @@ const updateTaskCalendarEvent = (
   providerCalendarEventId: string,
 ) =>
   updateTask(taskId, {
-    calendarBlockProvider: CalendarProviders.Google,
+    calendarBlockProvider: CalendarProvider.Google,
     calendarBlockProviderCalendarId: providerCalendarId,
     calendarBlockProviderEventId: providerCalendarEventId,
   }).catch((error) => {

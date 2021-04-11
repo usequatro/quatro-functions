@@ -9,7 +9,7 @@ import { findCalendarByWatcher, updateCalendar } from '../repositories/calendars
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 import parseGoogleCalendarDate from '../utils/parseGoogleCalendarDate';
 import { findById, update } from '../repositories/tasks';
-import { CalendarProviders } from '../constants/calendarProviders';
+import { CalendarProvider } from '../types/index';
 
 // Enable cors requests
 cors({ origin: true });
@@ -256,7 +256,7 @@ export default functions.region(REGION).https.onRequest(async (request, response
               scheduledStart: updatedItemStart,
               calendarBlockStart: updatedItemStart,
               calendarBlockEnd: updatedItemEnd,
-              calendarBlockProvider: CalendarProviders.Google,
+              calendarBlockProvider: CalendarProvider.Google,
               calendarBlockProviderCalendarId: calendar.providerCalendarId,
               calendarBlockProviderEventId: updatedItem.id,
             })

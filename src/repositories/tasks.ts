@@ -3,7 +3,8 @@
  */
 
 import admin from 'firebase-admin';
-import { Task, taskSchema } from '../schemas/task';
+import { taskSchema } from '../schemas/task';
+import { Task } from '../types/task';
 
 const COLLECTION = 'tasks';
 
@@ -96,6 +97,7 @@ export const update = async (id: string, task: Partial<Task>): Promise<undefined
   const validPayload = await taskSchema.validateAsync(task, {
     stripUnknown: true,
     noDefaults: true,
+    presence: 'optional',
   });
   const db = admin.firestore();
   await db.collection(COLLECTION).doc(id).update(validPayload);

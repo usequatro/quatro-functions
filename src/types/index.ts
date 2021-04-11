@@ -1,45 +1,10 @@
-export enum DaysOfWeek {
-  Monday = 'mon',
-  Tuesday = 'tue',
-  Wednesday = 'wed',
-  Thursday = 'thu',
-  Friday = 'fri',
-  Saturday = 'sat',
-  Sunday = 'sun',
-}
-
-type ActiveWeekdays = {
-  [DaysOfWeek.Monday]: boolean;
-  [DaysOfWeek.Tuesday]: boolean;
-  [DaysOfWeek.Wednesday]: boolean;
-  [DaysOfWeek.Thursday]: boolean;
-  [DaysOfWeek.Friday]: boolean;
-  [DaysOfWeek.Saturday]: boolean;
-  [DaysOfWeek.Sunday]: boolean;
-};
-
-export enum DurationUnits {
-  Day = 'day',
-  Week = 'week',
-  Month = 'month',
-}
-
-export type RecurringConfig = {
-  mostRecentTaskId: string;
-  userId: string;
-  unit: DurationUnits;
-  amount: number;
-  lastRunDate?: number | null;
-  activeWeekdays?: ActiveWeekdays;
-};
-
 export type User = {
   uid: string;
 };
 
-export type OptionalKeys<T> = {
-  [P in keyof T]?: T[P];
-};
+export enum CalendarProvider {
+  Google = 'google',
+}
 
 // Active Campaign types
 // export type AcList = {

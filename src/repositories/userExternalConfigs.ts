@@ -1,6 +1,7 @@
 import admin from 'firebase-admin';
 
-import { UserExternalConfig, userExternalConfigSchema } from '../schemas/userExternalConfig';
+import { userExternalConfigSchema } from '../schemas/userExternalConfig';
+import { UserExternalConfig } from '../types/userExternalConfig';
 
 export const COLLECTION = 'userExternalConfigs';
 
