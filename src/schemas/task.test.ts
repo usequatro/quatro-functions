@@ -1,3 +1,4 @@
+import { CalendarProviders } from '../constants/calendarProviders';
 import { taskSchema } from './task';
 
 describe('taskSchema', () => {
@@ -33,6 +34,22 @@ describe('taskSchema', () => {
         impact: 4,
       });
       expect(value.impact).toBe(3);
+    });
+  });
+
+  describe('calendar providers', () => {
+    it('allows google', () => {
+      const { value, error } = taskSchema.validate({
+        calendarBlockProvider: CalendarProviders.Google,
+      });
+      expect(error).toBe(undefined);
+      expect(value.calendarBlockProvider).toBe(CalendarProviders.Google);
+    });
+    it('does not allow something unknown', () => {
+      const { error } = taskSchema.validate({
+        calendarBlockProvider: 'guillermoCalendar',
+      });
+      expect(error).not.toBe(undefined);
     });
   });
 });
