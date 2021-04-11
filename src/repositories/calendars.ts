@@ -1,8 +1,9 @@
 import admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
-import { CalendarProviders } from '../constants/calendarProviders';
 
-import { calendarSchema, Calendar } from '../schemas/calendar';
+import { CalendarProvider } from '../types/index';
+import { calendarSchema } from '../schemas/calendar';
+import { Calendar } from '../types/calendar';
 
 export const COLLECTION = 'calendars';
 
@@ -51,6 +52,7 @@ export const updateCalendar = async (
   const validPayload = await calendarSchema.validateAsync(payload, {
     stripUnknown: true,
     noDefaults: true,
+    presence: 'optional',
   });
   return admin.firestore().collection(COLLECTION).doc(id).update(validPayload);
 };
@@ -62,7 +64,7 @@ export const findCalendarsWithExpiringGoogleCalendarChannel = async (
   const querySnapshot = await admin
     .firestore()
     .collection(COLLECTION)
-    .where('provider', '==', CalendarProviders.Google)
+    .where('provider', '==', CalendarProvider.Google)
     .where('watcherExpiration', '<=', targetWatcherExpiration)
     .limit(500) // insane limit
     .get();

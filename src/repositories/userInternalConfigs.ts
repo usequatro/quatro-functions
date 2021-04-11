@@ -1,6 +1,7 @@
 import admin from 'firebase-admin';
 
-import { UserInternalConfig, userInternalConfigSchema } from '../schemas/userInternalConfig';
+import { userInternalConfigSchema } from '../schemas/userInternalConfig';
+import { UserInternalConfig } from '../types/userInternalConfig';
 
 const COLLECTION = 'userInternalConfigs';
 

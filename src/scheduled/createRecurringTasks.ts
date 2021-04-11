@@ -25,7 +25,7 @@ import isAfter from 'date-fns/isAfter';
 import setYear from 'date-fns/setYear';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
-import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types';
+import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types/recurringConfig';
 
 export const applies = (
   recurringConfig: RecurringConfig,

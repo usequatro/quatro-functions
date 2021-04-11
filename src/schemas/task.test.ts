@@ -1,4 +1,4 @@
-import { CalendarProviders } from '../constants/calendarProviders';
+import { CalendarProvider } from '../types/index';
 import { taskSchema } from './task';
 
 describe('taskSchema', () => {
@@ -40,10 +40,10 @@ describe('taskSchema', () => {
   describe('calendar providers', () => {
     it('allows google', () => {
       const { value, error } = taskSchema.validate({
-        calendarBlockProvider: CalendarProviders.Google,
+        calendarBlockProvider: CalendarProvider.Google,
       });
       expect(error).toBe(undefined);
-      expect(value.calendarBlockProvider).toBe(CalendarProviders.Google);
+      expect(value.calendarBlockProvider).toBe(CalendarProvider.Google);
     });
     it('does not allow something unknown', () => {
       const { error } = taskSchema.validate({

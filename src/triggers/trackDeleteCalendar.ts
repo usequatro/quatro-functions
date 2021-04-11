@@ -1,6 +1,6 @@
 import * as functions from 'firebase-functions';
 
-import { Calendar } from '../schemas/calendar';
+import { Calendar } from '../types/calendar';
 // import { setCustomFieldValue } from '../utils/activeCampaignApi';
 // import { CALENDARS_FIELD } from '../constants/activeCampaign';
 import {

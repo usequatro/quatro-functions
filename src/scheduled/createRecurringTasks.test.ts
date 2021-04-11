@@ -4,7 +4,7 @@ import set from 'date-fns/set';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 
-import { DurationUnits, DaysOfWeek } from '../types';
+import { DurationUnits, DaysOfWeek } from '../types/recurringConfig';
 import { applies, getNewScheduledStart } from './createRecurringTasks';
 
 describe('createRecurringTasks', () => {

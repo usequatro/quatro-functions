@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import REGION from '../constants/region';
 import { updateCalendar, COLLECTION as CALENDARS_COLLECTION } from '../repositories/calendars';
-import { Calendar } from '../schemas/calendar';
+import { Calendar } from '../types/calendar';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
 const GOOGLE_CALENDAR_WEBHOOK_URL = functions.config().googleapis.calendarwebhookurl;

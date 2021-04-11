@@ -4,7 +4,7 @@ import isPast from 'date-fns/isPast';
 
 import REGION from '../constants/region';
 import { COLLECTION as CALENDARS_COLLECTION } from '../repositories/calendars';
-import { Calendar } from '../schemas/calendar';
+import { Calendar } from '../types/calendar';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 
 export default functions
