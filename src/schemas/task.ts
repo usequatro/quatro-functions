@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { CalendarProviders } from '../constants/calendarProviders';
 
 export enum TaskBlockedByTypes {
   Task = 'task',
@@ -21,7 +22,7 @@ export type Task = {
   calendarBlockCalendarId: string | null;
   calendarBlockStart: number | null;
   calendarBlockEnd: number | null;
-  calendarBlockProvider: string | null;
+  calendarBlockProvider: CalendarProviders | null;
   calendarBlockProviderCalendarId: string | null;
   calendarBlockProviderEventId: string | null;
 };
@@ -74,8 +75,8 @@ export const taskSchema = Joi.object({
   calendarBlockEnd: Joi.number().allow(null).default(null),
   calendarBlockCalendarId: Joi.string().allow(null).default(null),
   calendarBlockProviderCalendarId: Joi.string().allow(null).default(null),
-
-  // these below are managed by the backend of Firebase Functions
-  calendarBlockProvider: Joi.string().allow(null).default(null),
+  calendarBlockProvider: Joi.valid(...Object.values(CalendarProviders))
+    .allow(null)
+    .default(null),
   calendarBlockProviderEventId: Joi.string().allow(null).default(null),
 });
