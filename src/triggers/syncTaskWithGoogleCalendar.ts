@@ -7,39 +7,10 @@ import cond from 'lodash/cond';
 import REGION from '../constants/region';
 import { update as updateTask } from '../repositories/tasks';
 import { Task } from '../schemas/task';
-import { getCalendarById, updateCalendar } from '../repositories/calendars';
 import createGoogleApisAuth from '../utils/createGoogleApisAuth';
 import { CalendarProviders } from '../constants/calendarProviders';
 
 const { hostname } = functions.config().app || {};
-
-type TaskWrapper = { id: string; data: Task };
-
-const areCalendarEventFieldsDifferent = (taskA: Task, taskB: Task) =>
-  Boolean(
-    taskA.title !== taskB.title ||
-      taskA.description !== taskB.description ||
-      taskA.calendarBlockStart !== taskB.calendarBlockStart ||
-      taskA.calendarBlockEnd !== taskB.calendarBlockEnd,
-  );
-
-const taskHasCalendarBlock = (task: Task) =>
-  Boolean(task.calendarBlockStart && task.calendarBlockEnd);
-
-const getProviderCalendarIdFromFirestoreCalendarId = async (calendarId: string) => {
-  const [, calendarEntity] = (await getCalendarById(calendarId)) || [];
-  return calendarEntity?.providerCalendarId;
-};
-
-const updateCalendarWatcherTime = (calendarId: string, userId: string) =>
-  updateCalendar(calendarId, { watcherLastUpdated: Date.now() }).catch((error) => {
-    functions.logger.error('Error updating calendar watcherLastUpdated', {
-      calendarId,
-      userId,
-      errorCode: error.code,
-      errorMessage: error.message,
-    });
-  });
 
 const buildExtendedProperties = (taskId: string) => ({
   private: {
@@ -47,50 +18,19 @@ const buildExtendedProperties = (taskId: string) => ({
   },
 });
 
-enum CreationReason {
-  TaskJustCreated = 'taskJustCreated',
-  CalendarBlockJustSet = 'calendarBlockJustSet',
-  AfterMarkedIncomplete = 'afterMarkedIncomplete',
-}
+type TaskFieldsForCalendarEvent = {
+  title: string;
+  description: string;
+  calendarBlockStart: number;
+  calendarBlockEnd: number;
+};
 
-const processEventCreation = async (userId: string, after: TaskWrapper, reason: CreationReason) => {
-  const calendarId = after.data.calendarBlockCalendarId;
-  if (!calendarId) {
-    throw new Error(`No after.data.calendarBlockCalendarId in task ${after.id}`);
-  }
-
-  const calendarPair = await getCalendarById(calendarId);
-
-  if (!calendarPair) {
-    // If the calendar doesn't exist anymore, that's ok. Let's remove the timebox and finish
-    if (reason === CreationReason.AfterMarkedIncomplete) {
-      await updateTask(after.id, {
-        calendarBlockStart: null,
-        calendarBlockEnd: null,
-        calendarBlockCalendarId: null,
-        calendarBlockProviderCalendarId: null,
-        calendarBlockProvider: null,
-        calendarBlockProviderEventId: null,
-      });
-      return;
-      // Otherwise, it's an undesirable situation
-    } else {
-      functions.logger.error('No calendar found when trying to create event for task', {
-        reason,
-        userId,
-        calendarId,
-        taskId: after.id,
-      });
-      throw new Error('No calendar found when trying to create event for task');
-    }
-  }
-
-  const providerCalendarId = calendarPair[1].providerCalendarId;
-  if (!providerCalendarId) {
-    throw new Error(`No providerCalendarId in calendar ${calendarPair[0]}, for task ${after.id}`);
-  }
-
-  // Check if task has a time block, and create event for it if so
+const createCalendarEvent = async (
+  userId: string,
+  providerCalendarId: string,
+  { title, description, calendarBlockStart, calendarBlockEnd }: TaskFieldsForCalendarEvent,
+  taskId: string,
+) => {
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
 
@@ -99,20 +39,20 @@ const processEventCreation = async (userId: string, after: TaskWrapper, reason: 
     .insert({
       calendarId: providerCalendarId,
       requestBody: {
-        summary: after.data.title,
-        description: after.data.description,
+        summary: title,
+        description: description,
         start: {
-          dateTime: formatISO(after.data.calendarBlockStart || 0),
+          dateTime: formatISO(calendarBlockStart),
         },
         end: {
-          dateTime: formatISO(after.data.calendarBlockEnd || 0),
+          dateTime: formatISO(calendarBlockEnd),
         },
         source: {
           title: 'Quatro',
-          url: `https://${hostname}/task/${after.id}`,
+          url: `https://${hostname}/task/${taskId}`,
         },
         // @link https://developers.google.com/calendar/extended-properties
-        extendedProperties: buildExtendedProperties(after.id),
+        extendedProperties: buildExtendedProperties(taskId),
         status: 'confirmed',
         transparency: 'opaque',
         visibility: 'private',
@@ -120,28 +60,17 @@ const processEventCreation = async (userId: string, after: TaskWrapper, reason: 
     })
     .then(async (response) => {
       const eventId = response.data.id;
-      await updateTask(after.id, {
-        calendarBlockProvider: CalendarProviders.Google,
-        calendarBlockProviderCalendarId: providerCalendarId,
-        calendarBlockProviderEventId: eventId,
-      });
-
-      // Update watcher time so client refreshes the events list
-      await updateCalendarWatcherTime(calendarId, userId);
-
-      functions.logger.info('Processed Google Calendar event creation', {
-        reason,
-        googleCalendarEventId: eventId,
+      functions.logger.info(`Created event ${eventId} in calendar ${providerCalendarId}`, {
         userId,
-        taskId: after.id,
+        taskId,
       });
+      return response;
     })
     .catch((error) => {
       functions.logger.error('Error response from events.insert', {
-        reason,
         providerCalendarId,
         userId,
-        taskId: after.id,
+        taskId,
         errorMessage: error.message,
         errors: error.errors,
       });
@@ -149,41 +78,29 @@ const processEventCreation = async (userId: string, after: TaskWrapper, reason: 
     });
 };
 
-enum DeletionReason {
-  TaskDeleted = 'taskDeleted',
-  CalendarBlockNotSet = 'calendarBlockNotSet',
-  TaskCompleted = 'taskCompleted',
-}
-
-const processEventDeletion = async (
-  userId: string,
-  before: TaskWrapper,
-  after: TaskWrapper | null,
-  reason: DeletionReason,
-) => {
-  const calendarId = before.data.calendarBlockCalendarId;
-  if (!calendarId) {
-    throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
-  }
-  const providerEventId = before.data.calendarBlockProviderEventId;
-  if (!providerEventId) {
-    throw new Error(`No before.data.calendarBlockProviderEventId in task ${before.id}`);
-  }
-
-  let providerCalendarId = before.data.calendarBlockProviderCalendarId;
-  if (!providerCalendarId) {
-    // @todo: remove this fallback searching the calendar document after a while
-    providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(calendarId);
-    if (!providerCalendarId) {
-      throw new Error(`No before.data.calendarBlockProviderCalendarId in task ${before.id}`);
-    }
-    functions.logger.info('Had to use calendarBlockCalendarId fallback', {
-      userId,
-      taskId: before.id,
-      calendarBlockCalendarId: before.data.calendarBlockCalendarId,
+const updateTaskCalendarEvent = (
+  taskId: string,
+  providerCalendarId: string,
+  providerCalendarEventId: string,
+) =>
+  updateTask(taskId, {
+    calendarBlockProvider: CalendarProviders.Google,
+    calendarBlockProviderCalendarId: providerCalendarId,
+    calendarBlockProviderEventId: providerCalendarEventId,
+  }).catch((error) => {
+    // the update could fail because the task no longer exists. Fine if so.
+    functions.logger.warn('Error updating task after event creation', {
+      providerCalendarId,
+      taskId,
+      error,
     });
-  }
+  });
 
+const deleteCalendarEvent = async (
+  userId: string,
+  providerCalendarId: string,
+  providerEventId: string,
+) => {
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
@@ -195,33 +112,8 @@ const processEventDeletion = async (
       calendarId: providerCalendarId,
     })
     .then(async () => {
-      // If task still exists, clear values for being connected to a Google Calendar event
-      if (
-        after &&
-        (after.data.calendarBlockProviderEventId ||
-          after.data.calendarBlockProviderCalendarId ||
-          after.data.calendarBlockProvider)
-      ) {
-        await updateTask(after.id, {
-          calendarBlockProviderEventId: null,
-
-          // we could nullify these in case the task was completed, but we don't need to
-          // let's keep them to re-create the event if the task is mark incomplete later
-          // calendarBlockEnd: null,
-          // calendarBlockStart: null,
-          // calendarBlockCalendarId: null,
-          // calendarBlockProviderCalendarId: null,
-          // calendarBlockProvider: null,
-        });
-
-        // Update watcher time so client refreshes the events list
-        await updateCalendarWatcherTime(calendarId, userId);
-      }
-      functions.logger.info('Processed Google Calendar event deletion', {
-        reason,
-        googleCalendarEventId: providerEventId,
+      functions.logger.info(`Deleted event ${providerEventId} of calendar ${providerCalendarId}`, {
         userId,
-        taskId: before.id,
       });
     })
     .catch((error) => {
@@ -230,11 +122,9 @@ const processEventDeletion = async (
         return;
       }
       functions.logger.error('Error response from events.delete', {
-        reason,
-        providerCalendarId,
-        googleCalendarEventId: providerEventId,
         userId,
-        taskId: before.id,
+        providerCalendarId,
+        providerEventId,
         errorMessage: error.message,
         errors: error.errors,
       });
@@ -242,29 +132,13 @@ const processEventDeletion = async (
     });
 };
 
-const processEventPatch = async (userId: string, after: TaskWrapper) => {
-  const calendarId = after.data.calendarBlockCalendarId;
-  if (!calendarId) {
-    throw new Error(`No after.data.calendarBlockCalendarId in task ${after.id}`);
-  }
-  if (!after.data.calendarBlockProviderEventId) {
-    throw new Error(`No after.data.calendarBlockProviderEventId in task ${after.id}`);
-  }
-
-  let providerCalendarId = after.data.calendarBlockProviderCalendarId;
-  if (!providerCalendarId) {
-    // @todo: remove this fallback searching the calendar document after a while
-    providerCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(calendarId);
-    if (!providerCalendarId) {
-      throw new Error(`No after.data.calendarBlockProviderCalendarId in task ${after.id}`);
-    }
-    functions.logger.info('Had to use calendarBlockCalendarId fallback', {
-      userId,
-      taskId: after.id,
-      calendarBlockCalendarId: after.data.calendarBlockCalendarId,
-    });
-  }
-
+const patchCalendarEvent = async (
+  userId: string,
+  providerCalendarId: string,
+  providerEventId: string,
+  { title, description, calendarBlockStart, calendarBlockEnd }: TaskFieldsForCalendarEvent,
+  taskId: string,
+) => {
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
@@ -272,37 +146,34 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
   // @link https://developers.google.com/calendar/v3/reference/events/patch
   return calendar.events
     .patch({
-      eventId: after.data.calendarBlockProviderEventId,
+      eventId: providerEventId,
       calendarId: providerCalendarId,
       requestBody: {
-        summary: after.data.title,
-        description: after.data.description,
+        summary: title,
+        description: description,
         start: {
-          dateTime: formatISO(after.data.calendarBlockStart || 0),
+          dateTime: formatISO(calendarBlockStart || 0),
         },
         end: {
-          dateTime: formatISO(after.data.calendarBlockEnd || 0),
+          dateTime: formatISO(calendarBlockEnd || 0),
         },
         status: 'confirmed',
-        extendedProperties: buildExtendedProperties(after.id),
+        // We always patch because with the move we lose the extendedProperties
+        extendedProperties: buildExtendedProperties(taskId),
       },
     })
     .then(async () => {
-      // Update watcher time so client refreshes the events list
-      await updateCalendarWatcherTime(calendarId, userId);
-
-      functions.logger.info('Processed Google Calendar event patching', {
-        googleCalendarEventId: after.data.calendarBlockProviderEventId,
+      functions.logger.info(`Patched event ${providerEventId} of calendar ${providerCalendarId}`, {
         userId,
-        taskId: after.id,
+        taskId,
       });
     })
     .catch((error) => {
       functions.logger.error('Error response from events.patch', {
         providerCalendarId,
-        googleCalendarEventId: after.data.calendarBlockProviderEventId,
+        providerEventId,
         userId,
-        taskId: after.id,
+        taskId: taskId,
         errorMessage: error.message,
         errors: error.errors,
       });
@@ -310,50 +181,12 @@ const processEventPatch = async (userId: string, after: TaskWrapper) => {
     });
 };
 
-const processEventMove = async (userId: string, before: TaskWrapper, after: TaskWrapper) => {
-  if (!before.data.calendarBlockCalendarId) {
-    throw new Error(`No before.data.calendarBlockCalendarId in task ${before.id}`);
-  }
-  if (!before.data.calendarBlockProviderEventId) {
-    throw new Error(`No before.data.calendarBlockProviderEventId in task ${before.id}`);
-  }
-  if (!after.data.calendarBlockCalendarId) {
-    throw new Error(`No after.data.calendarBlockCalendarId in task ${after.id}`);
-  }
-
-  let beforeProviderCalendarId = before.data.calendarBlockProviderCalendarId;
-  if (!beforeProviderCalendarId) {
-    // @todo: remove this fallback searching the calendar document after a while
-    beforeProviderCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
-      before.data.calendarBlockCalendarId,
-    );
-    if (!beforeProviderCalendarId) {
-      throw new Error(`No before.data.calendarBlockProviderCalendarId in task ${before.id}`);
-    }
-    functions.logger.info('Had to use calendarBlockCalendarId fallback', {
-      userId,
-      taskId: before.id,
-      calendarBlockCalendarId: before.data.calendarBlockCalendarId,
-    });
-  }
-
-  // We expect calendarBlockProviderCalendarId to be changed by the client producing this effect
-  let afterProviderCalendarId = after.data.calendarBlockProviderCalendarId;
-  if (!afterProviderCalendarId) {
-    // @todo: remove this fallback searching the calendar document after a while
-    afterProviderCalendarId = await getProviderCalendarIdFromFirestoreCalendarId(
-      after.data.calendarBlockCalendarId,
-    );
-    if (!afterProviderCalendarId) {
-      throw new Error(`No after.data.calendarBlockProviderCalendarId in task ${after.id}`);
-    }
-    functions.logger.info('Had to use calendarBlockCalendarId fallback', {
-      userId,
-      taskId: after.id,
-      calendarBlockCalendarId: after.data.calendarBlockCalendarId,
-    });
-  }
-
+const moveCalendarEvent = async (
+  userId: string,
+  currentProviderCalendarId: string,
+  nextProviderCalendarId: string,
+  providerEventId: string,
+) => {
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
@@ -361,26 +194,25 @@ const processEventMove = async (userId: string, before: TaskWrapper, after: Task
   // @link https://developers.google.com/calendar/v3/reference/events/move
   return calendar.events
     .move({
-      calendarId: beforeProviderCalendarId,
-      destination: afterProviderCalendarId,
-      eventId: before.data.calendarBlockProviderEventId,
+      calendarId: currentProviderCalendarId,
+      destination: nextProviderCalendarId,
+      eventId: providerEventId,
     })
-    .then(async () => {
-      functions.logger.info('Processed Google Calendar event moving', {
-        googleCalendarEventId: after.data.calendarBlockProviderEventId,
-        beforeProviderCalendarId,
-        afterProviderCalendarId,
-        userId,
-        taskId: after.id,
-      });
+    .then(async (response) => {
+      functions.logger.info(
+        `Moved event ${providerEventId} from ${currentProviderCalendarId} to ${nextProviderCalendarId}`,
+        {
+          userId,
+        },
+      );
+      return response;
     })
     .catch((error) => {
       functions.logger.error('Error response from events.move', {
-        beforeProviderCalendarId,
-        afterProviderCalendarId,
-        googleCalendarEventId: before.data.calendarBlockProviderEventId,
+        providerEventId: providerEventId,
+        lastProviderCalendarId: currentProviderCalendarId,
+        nextProviderCalendarId,
         userId,
-        taskId: after.id,
         errorMessage: error.message,
         errors: error.errors,
       });
@@ -388,91 +220,286 @@ const processEventMove = async (userId: string, before: TaskWrapper, after: Task
     });
 };
 
+const wasTaskWithEventCompleted = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const afterData = change.after.data() as Task;
+  const taskWasJustCompleted = Boolean(!beforeData.completed && afterData.completed);
+  const taskHasEvent = Boolean(afterData.calendarBlockProviderEventId);
+  const taskHasCalendar = Boolean(afterData.calendarBlockProviderCalendarId);
+  return Boolean(taskWasJustCompleted && taskHasCalendar && taskHasEvent);
+};
+
+const wasTaskDeletedWithCalendarEvent = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskWasJustDeleted = change.before.exists && !change.after.exists;
+  if (!taskWasJustDeleted) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const taskHadEvent = Boolean(beforeData.calendarBlockProviderEventId);
+  return taskHadEvent;
+};
+
+const wasTaskCalendarBlockRemoved = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const afterData = change.after.data() as Task;
+  const beforeHadCalendarBlock = Boolean(
+    beforeData.calendarBlockStart && beforeData.calendarBlockEnd,
+  );
+  const afterHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+
+  return Boolean(beforeHadCalendarBlock && !afterHasCalendarBlock);
+};
+
+const wasTaskJustCreatedWithCalendarBlock = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskJustCreated = !change.before.exists && change.after.exists;
+  if (!taskJustCreated) {
+    return false;
+  }
+  const afterData = change.after.data() as Task;
+  const alreadyHasEvent = Boolean(afterData.calendarBlockProviderEventId);
+  if (alreadyHasEvent) {
+    return false;
+  }
+  const taskHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+  const taskHasCalendar = Boolean(afterData.calendarBlockProviderCalendarId);
+  return Boolean(taskHasCalendar && taskHasCalendarBlock);
+};
+
+const wasCalendarBlockJustDefined = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const afterData = change.after.data() as Task;
+  const alreadyHasEvent = Boolean(afterData.calendarBlockProviderEventId);
+  if (alreadyHasEvent) {
+    return false;
+  }
+  const taskHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+  const taskHasCalendarEvent = Boolean(afterData.calendarBlockProviderEventId);
+  const taskHasCalendar = Boolean(afterData.calendarBlockProviderCalendarId);
+  return !taskHasCalendarEvent && taskHasCalendarBlock && taskHasCalendar;
+};
+
+const wasTaskWithCalendarBlockJustMarkedIncomplete = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const afterData = change.after.data() as Task;
+  const taskWasMarkedIncomplete = Boolean(beforeData.completed && !afterData.completed);
+  const taskHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+
+  return taskWasMarkedIncomplete && taskHasCalendarBlock;
+};
+
+const wasTaskMovedBetweenCalendars = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const afterData = change.after.data() as Task;
+  const calendarsAreTheSame =
+    beforeData.calendarBlockProviderCalendarId === afterData.calendarBlockProviderCalendarId;
+  const taskHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+  const taskHadEvent = Boolean(beforeData.calendarBlockProviderEventId);
+  return taskHadEvent && taskHasCalendarBlock && !calendarsAreTheSame;
+};
+
+const wereTaskDetailsModifiedInSameCalendar = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  const taskRemainsExisting = change.before.exists && change.after.exists;
+  if (!taskRemainsExisting) {
+    return false;
+  }
+  const beforeData = change.before.data() as Task;
+  const afterData = change.after.data() as Task;
+  const taskHasCalendarBlock = Boolean(afterData.calendarBlockStart && afterData.calendarBlockEnd);
+  const taskHadCalendarBlock = Boolean(
+    beforeData.calendarBlockStart && beforeData.calendarBlockEnd,
+  );
+  const calendarsAreTheSame =
+    beforeData.calendarBlockProviderCalendarId === afterData.calendarBlockProviderCalendarId;
+  const hasChanges = Boolean(
+    beforeData.title !== afterData.title ||
+      beforeData.description !== afterData.description ||
+      beforeData.calendarBlockStart !== afterData.calendarBlockStart ||
+      beforeData.calendarBlockEnd !== afterData.calendarBlockEnd,
+  );
+  return taskHasCalendarBlock && taskHadCalendarBlock && calendarsAreTheSame && hasChanges;
+};
+
 export default functions
   .region(REGION)
   .firestore.document('tasks/{taskId}')
   // https://firebase.google.com/docs/functions/firestore-events
-  .onWrite(async (change /*, context */) => {
-    const before: TaskWrapper | null = change.before.exists
-      ? { id: change.before.id, data: change.before.data() as Task }
-      : null;
-    const after: TaskWrapper | null = change.after.exists
-      ? { id: change.after.id, data: change.after.data() as Task }
-      : null;
+  .onWrite((change /*, context */) => {
+    return cond([
+      [
+        wasTaskDeletedWithCalendarEvent,
+        () => {
+          functions.logger.info('Processing wasTaskDeletedWithCalendarEvent');
+          const beforeTask = change.before.data() as Task;
+          return deleteCalendarEvent(
+            beforeTask.userId,
+            beforeTask.calendarBlockProviderCalendarId as string,
+            beforeTask.calendarBlockProviderEventId as string,
+          );
+        },
+      ],
+      [
+        wasTaskCalendarBlockRemoved,
+        () => {
+          functions.logger.info('Processing wasTaskCalendarBlockRemoved');
+          const beforeTask = change.before.data() as Task;
+          return deleteCalendarEvent(
+            beforeTask.userId,
+            beforeTask.calendarBlockProviderCalendarId as string,
+            beforeTask.calendarBlockProviderEventId as string,
+          ).then(async () => {
+            // If task still exists, clear values for being connected to a Google Calendar event
+            if (change.after.exists) {
+              await updateTask(change.after.id, {
+                calendarBlockProviderEventId: null,
+              });
+            }
+          });
+        },
+      ],
+      [
+        wasTaskWithEventCompleted,
+        () => {
+          functions.logger.info('Processing wasTaskWithEventCompleted');
+          const beforeTask = change.before.data() as Task;
+          return deleteCalendarEvent(
+            beforeTask.userId,
+            beforeTask.calendarBlockProviderCalendarId as string,
+            beforeTask.calendarBlockProviderEventId as string,
+          );
+        },
+      ],
+      [
+        (c) =>
+          wasTaskJustCreatedWithCalendarBlock(c) ||
+          wasCalendarBlockJustDefined(c) ||
+          wasTaskWithCalendarBlockJustMarkedIncomplete(c),
+        () => {
+          functions.logger.info('Processing creation');
+          const taskId = change.after.id;
+          const task = change.after.data() as Task;
+          const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+            title: task.title,
+            description: task.description,
+            calendarBlockStart: task.calendarBlockStart,
+            calendarBlockEnd: task.calendarBlockEnd,
+          });
+          return createCalendarEvent(
+            task.userId,
+            task.calendarBlockProviderCalendarId as string,
+            taskOptions,
+            taskId,
+          ).then((response) => {
+            const eventId = response.data.id as string;
+            return updateTaskCalendarEvent(
+              change.after.id,
+              task.calendarBlockProviderCalendarId as string,
+              eventId,
+            );
+          });
+        },
+      ],
+      [
+        wasTaskMovedBetweenCalendars,
+        () => {
+          functions.logger.info('Processing wasTaskMovedBetweenCalendars');
+          const beforeTask = change.before.data() as Task;
+          const afterTask = change.after.data() as Task;
+          const taskId = change.after.id;
+          const { userId } = afterTask;
 
-    const userId = after?.data.userId || before?.data.userId;
+          const newProviderCalendarId = afterTask.calendarBlockProviderCalendarId as string;
 
-    if (!userId) {
-      throw new Error(
-        `No user ID found in either
-          before task ${before?.id || '-'} or
-          after task ${after?.id || '-'}`,
-      );
-    }
+          return moveCalendarEvent(
+            userId,
+            beforeTask.calendarBlockProviderCalendarId as string,
+            newProviderCalendarId,
+            beforeTask.calendarBlockProviderEventId as string,
+          ).then(async (response) => {
+            // usually the event ID won't have changed
+            const newProviderEventId = response.data.id as string;
+            await updateTaskCalendarEvent(taskId, newProviderCalendarId, newProviderEventId);
 
-    // functions.logger.info('Debug after and before', { after, before });
+            const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+              title: afterTask.title,
+              description: afterTask.description,
+              calendarBlockStart: afterTask.calendarBlockStart,
+              calendarBlockEnd: afterTask.calendarBlockEnd,
+            });
+            // We always patch because with the move we lose the extendedProperties
+            return patchCalendarEvent(
+              userId,
+              newProviderCalendarId,
+              newProviderEventId,
+              taskOptions,
+              taskId,
+            );
+          });
+        },
+      ],
+      [
+        wereTaskDetailsModifiedInSameCalendar,
+        () => {
+          functions.logger.info('Processing wereTaskDetailsModifiedInSameCalendar');
+          const afterTask = change.after.data() as Task;
 
-    // Deletion
-    if (before && before.data.calendarBlockCalendarId && before.data.calendarBlockProviderEventId) {
-      /* eslint-disable @typescript-eslint/no-non-null-assertion */
-      const reason: DeletionReason | undefined = cond([
-        [() => !after, () => DeletionReason.TaskDeleted],
-        [() => !taskHasCalendarBlock(after!.data), () => DeletionReason.CalendarBlockNotSet],
-        [
-          () => Boolean(!before.data.completed && after!.data.completed),
-          () => DeletionReason.TaskCompleted,
-        ],
-      ])(undefined);
-      /* eslint-enable @typescript-eslint/no-non-null-assertion */
-      if (reason) {
-        return processEventDeletion(userId, before, after, reason);
-      }
-    }
-
-    // Creation
-    if (
-      after &&
-      after.data.calendarBlockCalendarId &&
-      !after.data.calendarBlockProviderEventId &&
-      taskHasCalendarBlock(after.data)
-    ) {
-      /* eslint-disable @typescript-eslint/no-non-null-assertion */
-      const reason: CreationReason | undefined = cond([
-        [() => !before, () => CreationReason.TaskJustCreated],
-        [() => !taskHasCalendarBlock(before!.data), () => CreationReason.CalendarBlockJustSet],
-        [() => !after.data.completed, () => CreationReason.AfterMarkedIncomplete],
-      ])(undefined);
-      /* eslint-enable @typescript-eslint/no-non-null-assertion */
-      if (reason) {
-        return processEventCreation(userId, after, reason);
-      }
-    }
-
-    // Moving to different calendar
-    if (
-      after &&
-      before &&
-      before.data.calendarBlockCalendarId &&
-      after.data.calendarBlockCalendarId &&
-      before.data.calendarBlockCalendarId !== after.data.calendarBlockCalendarId
-    ) {
-      return processEventMove(userId, before, after).then(
-        // We always patch because with the move we lose the extendedProperties
-        () => processEventPatch(userId, after),
-      );
-    }
-
-    // Made some task changes, but on the same calendar
-    if (
-      before &&
-      taskHasCalendarBlock(before.data) &&
-      after &&
-      taskHasCalendarBlock(after.data) &&
-      before.data.calendarBlockCalendarId === after.data.calendarBlockCalendarId &&
-      areCalendarEventFieldsDifferent(before.data, after.data)
-    ) {
-      return processEventPatch(userId, after);
-    }
-
-    return undefined;
+          const taskId = change.after.id;
+          const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+            title: afterTask.title,
+            description: afterTask.description,
+            calendarBlockStart: afterTask.calendarBlockStart,
+            calendarBlockEnd: afterTask.calendarBlockEnd,
+          });
+          // We always patch because with the move we lose the extendedProperties
+          return patchCalendarEvent(
+            afterTask.userId,
+            afterTask.calendarBlockProviderCalendarId as string,
+            afterTask.calendarBlockProviderEventId as string,
+            taskOptions,
+            taskId,
+          );
+        },
+      ],
+      [
+        () => true,
+        () => {
+          functions.logger.info('Nothing to do');
+          return undefined;
+        },
+      ],
+    ])(change);
   });
