@@ -78,3 +78,6 @@ node_modules/
 
 # For Firebase emulator of functions
 .runtimeconfig.json
+
+# Mac files
+.DS_Store
