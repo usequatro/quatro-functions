@@ -6,7 +6,7 @@ import { DurationUnits, DaysOfWeek } from '../types/recurringConfig';
 export const recurringConfigSchema = object({
   userId: string(),
 
-  mostRecentTaskId: string().required(),
+  mostRecentTaskId: string(),
   unit: valid(...Object.values(DurationUnits)),
   amount: number(),
   lastRunDate: number().allow(null).default(null),
