@@ -41,10 +41,10 @@ const createCalendarEvent = async (
         summary: title,
         description: description,
         start: {
-          dateTime: formatISO(calendarBlockStart || 0),
+          dateTime: formatISO(calendarBlockStart),
         },
         end: {
-          dateTime: formatISO(calendarBlockEnd || 0),
+          dateTime: formatISO(calendarBlockEnd),
         },
         source: {
           title: 'Quatro',
@@ -54,7 +54,7 @@ const createCalendarEvent = async (
         extendedProperties: {
           private: {
             taskId,
-            completed: completed ? '1' : '0',
+            completed: `${completed || 0}`,
           },
         },
         status: 'confirmed',
@@ -176,7 +176,7 @@ const patchCalendarEvent = async (
         extendedProperties: {
           private: {
             ...(taskId !== undefined ? { taskId } : {}),
-            ...(completed !== undefined ? { completed: completed ? '1' : '0' } : {}),
+            ...(completed !== undefined ? { completed: `${completed || 0}` } : {}),
           },
         },
       },
@@ -420,12 +420,11 @@ export default functions
       [
         wasTaskWithEventCompleted,
         () => {
-          const beforeTask = change.before.data() as Task;
           const afterTask = change.after.data() as Task;
           const completionTimestamp = afterTask.completed as number;
+
           const eventTimesAreUnknown = !afterTask.calendarBlockStart || !afterTask.calendarBlockEnd;
           const eventIsUpcoming =
-            // afterTask.calendarBlockStart && afterTask.calendarBlockStart >= completionTimestamp;
             afterTask.calendarBlockStart &&
             isBefore(completionTimestamp, afterTask.calendarBlockStart);
           const eventIsOngoing =
@@ -439,14 +438,15 @@ export default functions
             eventTimesAreUnknown,
             eventIsUpcoming,
             eventIsOngoing,
+            eventIsPast,
             completionTimestamp,
           });
 
           if (eventTimesAreUnknown || eventIsUpcoming) {
             return deleteCalendarEvent(
-              beforeTask.userId,
-              beforeTask.calendarBlockProviderCalendarId as string,
-              beforeTask.calendarBlockProviderEventId as string,
+              afterTask.userId,
+              afterTask.calendarBlockProviderCalendarId as string,
+              afterTask.calendarBlockProviderEventId as string,
             );
           } else if (eventIsOngoing) {
             return patchCalendarEvent(
