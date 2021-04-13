@@ -3,7 +3,7 @@ import { google } from 'googleapis';
 
 import isBefore from 'date-fns/isBefore';
 import formatISO from 'date-fns/formatISO';
-import endOfMinute from 'date-fns/endOfMinute';
+import startOfMinute from 'date-fns/startOfMinute';
 import cond from 'lodash/cond';
 
 import REGION from '../constants/region';
@@ -454,7 +454,7 @@ export default functions
               afterTask.calendarBlockProviderCalendarId as string,
               afterTask.calendarBlockProviderEventId as string,
               {
-                calendarBlockEnd: endOfMinute(completionTimestamp).getTime(),
+                calendarBlockEnd: startOfMinute(completionTimestamp).getTime(),
                 completed: completionTimestamp,
               },
             );
