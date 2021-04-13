@@ -1,7 +1,9 @@
 import * as functions from 'firebase-functions';
 import { google } from 'googleapis';
 
+import isBefore from 'date-fns/isBefore';
 import formatISO from 'date-fns/formatISO';
+import endOfMinute from 'date-fns/endOfMinute';
 import cond from 'lodash/cond';
 
 import REGION from '../constants/region';
@@ -12,27 +14,24 @@ import { CalendarProvider } from '../types/index';
 
 const { hostname } = functions.config().app || {};
 
-const buildExtendedProperties = (taskId: string) => ({
-  private: {
-    taskId,
-  },
-});
-
 type TaskFieldsForCalendarEvent = {
   title: string;
   description: string;
   calendarBlockStart: number;
   calendarBlockEnd: number;
+  completed: number | null;
+  taskId: string;
 };
 
 const createCalendarEvent = async (
   userId: string,
   providerCalendarId: string,
-  { title, description, calendarBlockStart, calendarBlockEnd }: TaskFieldsForCalendarEvent,
-  taskId: string,
+  fields: TaskFieldsForCalendarEvent,
 ) => {
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
+
+  const { title, description, calendarBlockStart, calendarBlockEnd, taskId, completed } = fields;
 
   // @link https://developers.google.com/calendar/v3/reference/events/insert
   return calendar.events
@@ -42,17 +41,22 @@ const createCalendarEvent = async (
         summary: title,
         description: description,
         start: {
-          dateTime: formatISO(calendarBlockStart),
+          dateTime: formatISO(calendarBlockStart || 0),
         },
         end: {
-          dateTime: formatISO(calendarBlockEnd),
+          dateTime: formatISO(calendarBlockEnd || 0),
         },
         source: {
           title: 'Quatro',
           url: `https://${hostname}/task/${taskId}`,
         },
         // @link https://developers.google.com/calendar/extended-properties
-        extendedProperties: buildExtendedProperties(taskId),
+        extendedProperties: {
+          private: {
+            taskId,
+            completed: completed ? '1' : '0',
+          },
+        },
         status: 'confirmed',
         transparency: 'opaque',
         visibility: 'private',
@@ -63,6 +67,7 @@ const createCalendarEvent = async (
       functions.logger.info(`Created event ${eventId} in calendar ${providerCalendarId}`, {
         userId,
         taskId,
+        fields,
       });
       return response;
     })
@@ -136,12 +141,13 @@ const patchCalendarEvent = async (
   userId: string,
   providerCalendarId: string,
   providerEventId: string,
-  { title, description, calendarBlockStart, calendarBlockEnd }: TaskFieldsForCalendarEvent,
-  taskId: string,
+  updates: Partial<TaskFieldsForCalendarEvent>,
 ) => {
   // Check if task has a time block, and create event for it if so
   const auth = await createGoogleApisAuth(userId);
   const calendar = google.calendar({ version: 'v3', auth });
+
+  const { title, description, calendarBlockStart, calendarBlockEnd, taskId, completed } = updates;
 
   // @link https://developers.google.com/calendar/v3/reference/events/patch
   return calendar.events
@@ -149,23 +155,37 @@ const patchCalendarEvent = async (
       eventId: providerEventId,
       calendarId: providerCalendarId,
       requestBody: {
-        summary: title,
-        description: description,
-        start: {
-          dateTime: formatISO(calendarBlockStart || 0),
-        },
-        end: {
-          dateTime: formatISO(calendarBlockEnd || 0),
-        },
+        ...(title !== undefined ? { summary: title } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(calendarBlockStart !== undefined
+          ? {
+              start: {
+                dateTime: formatISO(calendarBlockStart),
+              },
+            }
+          : {}),
+        ...(calendarBlockEnd !== undefined
+          ? {
+              end: {
+                dateTime: formatISO(calendarBlockEnd),
+              },
+            }
+          : {}),
         status: 'confirmed',
-        // We always patch because with the move we lose the extendedProperties
-        extendedProperties: buildExtendedProperties(taskId),
+        // @link https://developers.google.com/calendar/extended-properties
+        extendedProperties: {
+          private: {
+            ...(taskId !== undefined ? { taskId } : {}),
+            ...(completed !== undefined ? { completed: completed ? '1' : '0' } : {}),
+          },
+        },
       },
     })
     .then(async () => {
       functions.logger.info(`Patched event ${providerEventId} of calendar ${providerCalendarId}`, {
         userId,
         taskId,
+        updates,
       });
     })
     .catch((error) => {
@@ -314,6 +334,12 @@ const wasTaskWithCalendarBlockJustMarkedIncomplete = (
   return taskWasMarkedIncomplete && taskHasCalendarBlock;
 };
 
+const hasTaskAssociatedCalendarBlockEventId = (
+  change: functions.Change<functions.firestore.DocumentSnapshot>,
+): boolean => {
+  return change.after.data()?.calendarBlockProviderEventId;
+};
+
 const wasTaskMovedBetweenCalendars = (
   change: functions.Change<functions.firestore.DocumentSnapshot>,
 ): boolean => {
@@ -394,12 +420,81 @@ export default functions
       [
         wasTaskWithEventCompleted,
         () => {
-          functions.logger.info('Processing wasTaskWithEventCompleted');
           const beforeTask = change.before.data() as Task;
-          return deleteCalendarEvent(
-            beforeTask.userId,
-            beforeTask.calendarBlockProviderCalendarId as string,
-            beforeTask.calendarBlockProviderEventId as string,
+          const afterTask = change.after.data() as Task;
+          const completionTimestamp = afterTask.completed as number;
+          const eventTimesAreUnknown = !afterTask.calendarBlockStart || !afterTask.calendarBlockEnd;
+          const eventIsUpcoming =
+            // afterTask.calendarBlockStart && afterTask.calendarBlockStart >= completionTimestamp;
+            afterTask.calendarBlockStart &&
+            isBefore(completionTimestamp, afterTask.calendarBlockStart);
+          const eventIsOngoing =
+            afterTask.calendarBlockStart &&
+            afterTask.calendarBlockEnd &&
+            isBefore(afterTask.calendarBlockStart, completionTimestamp) &&
+            isBefore(completionTimestamp, afterTask.calendarBlockEnd);
+          const eventIsPast = !eventTimesAreUnknown && !eventIsOngoing && !eventIsUpcoming;
+
+          functions.logger.info('Processing wasTaskWithEventCompleted', {
+            eventTimesAreUnknown,
+            eventIsUpcoming,
+            eventIsOngoing,
+            completionTimestamp,
+          });
+
+          if (eventTimesAreUnknown || eventIsUpcoming) {
+            return deleteCalendarEvent(
+              beforeTask.userId,
+              beforeTask.calendarBlockProviderCalendarId as string,
+              beforeTask.calendarBlockProviderEventId as string,
+            );
+          } else if (eventIsOngoing) {
+            return patchCalendarEvent(
+              afterTask.userId,
+              afterTask.calendarBlockProviderCalendarId as string,
+              afterTask.calendarBlockProviderEventId as string,
+              {
+                calendarBlockEnd: endOfMinute(completionTimestamp).getTime(),
+                completed: completionTimestamp,
+              },
+            );
+          } else if (eventIsPast) {
+            return patchCalendarEvent(
+              afterTask.userId,
+              afterTask.calendarBlockProviderCalendarId as string,
+              afterTask.calendarBlockProviderEventId as string,
+              { completed: completionTimestamp },
+            );
+          }
+          return Promise.resolve();
+        },
+      ],
+      [
+        (c) =>
+          wasTaskWithCalendarBlockJustMarkedIncomplete(c) &&
+          hasTaskAssociatedCalendarBlockEventId(c),
+        () => {
+          functions.logger.info(
+            'Processing wasTaskWithCalendarBlockJustMarkedIncomplete && hasTaskAssociatedCalendarBlockEventId',
+          );
+          const afterTask = change.after.data() as Task;
+          const calendarBlockStart = afterTask.calendarBlockStart as number;
+          const calendarBlockEnd = afterTask.calendarBlockEnd as number;
+
+          const taskOptions = {
+            title: afterTask.title,
+            description: afterTask.description,
+            calendarBlockStart,
+            calendarBlockEnd,
+            taskId: change.after.id,
+            completed: afterTask.completed,
+          };
+          // We always patch because with the move we lose the extendedProperties
+          return patchCalendarEvent(
+            afterTask.userId,
+            afterTask.calendarBlockProviderCalendarId as string,
+            afterTask.calendarBlockProviderEventId as string,
+            taskOptions,
           );
         },
       ],
@@ -407,22 +502,25 @@ export default functions
         (c) =>
           wasTaskJustCreatedWithCalendarBlock(c) ||
           wasCalendarBlockJustDefined(c) ||
-          wasTaskWithCalendarBlockJustMarkedIncomplete(c),
+          (wasTaskWithCalendarBlockJustMarkedIncomplete(c) &&
+            !hasTaskAssociatedCalendarBlockEventId(c)),
         () => {
           functions.logger.info('Processing creation');
-          const taskId = change.after.id;
           const task = change.after.data() as Task;
-          const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+          const calendarBlockStart = task.calendarBlockStart as number;
+          const calendarBlockEnd = task.calendarBlockEnd as number;
+          const taskOptions = {
             title: task.title,
             description: task.description,
-            calendarBlockStart: task.calendarBlockStart,
-            calendarBlockEnd: task.calendarBlockEnd,
-          });
+            calendarBlockStart,
+            calendarBlockEnd,
+            completed: task.completed,
+            taskId: change.after.id,
+          };
           return createCalendarEvent(
             task.userId,
             task.calendarBlockProviderCalendarId as string,
             taskOptions,
-            taskId,
           ).then((response) => {
             const eventId = response.data.id as string;
             return updateTaskCalendarEvent(
@@ -454,19 +552,22 @@ export default functions
             const newProviderEventId = response.data.id as string;
             await updateTaskCalendarEvent(taskId, newProviderCalendarId, newProviderEventId);
 
-            const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+            const calendarBlockStart = afterTask.calendarBlockStart as number;
+            const calendarBlockEnd = afterTask.calendarBlockEnd as number;
+            const taskOptions = {
               title: afterTask.title,
               description: afterTask.description,
-              calendarBlockStart: afterTask.calendarBlockStart,
-              calendarBlockEnd: afterTask.calendarBlockEnd,
-            });
-            // We always patch because with the move we lose the extendedProperties
+              calendarBlockStart,
+              calendarBlockEnd,
+              taskId,
+              completed: afterTask.completed,
+            };
+            // 🚨 We always patch because with the move we lose the extendedProperties
             return patchCalendarEvent(
               userId,
               newProviderCalendarId,
               newProviderEventId,
               taskOptions,
-              taskId,
             );
           });
         },
@@ -478,19 +579,22 @@ export default functions
           const afterTask = change.after.data() as Task;
 
           const taskId = change.after.id;
-          const taskOptions = <TaskFieldsForCalendarEvent>(<unknown>{
+          const calendarBlockStart = afterTask.calendarBlockStart as number;
+          const calendarBlockEnd = afterTask.calendarBlockEnd as number;
+          const taskOptions = {
             title: afterTask.title,
             description: afterTask.description,
-            calendarBlockStart: afterTask.calendarBlockStart,
-            calendarBlockEnd: afterTask.calendarBlockEnd,
-          });
+            calendarBlockStart,
+            calendarBlockEnd,
+            taskId,
+            completed: afterTask.completed,
+          };
           // We always patch because with the move we lose the extendedProperties
           return patchCalendarEvent(
             afterTask.userId,
             afterTask.calendarBlockProviderCalendarId as string,
             afterTask.calendarBlockProviderEventId as string,
             taskOptions,
-            taskId,
           );
         },
       ],
