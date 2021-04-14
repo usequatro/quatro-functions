@@ -72,7 +72,7 @@ const createCalendarEvent = async (
       return response;
     })
     .catch((error) => {
-      functions.logger.error('Error response from events.insert', {
+      functions.logger.error(new Error('Error response from events.insert'), {
         providerCalendarId,
         userId,
         taskId,
@@ -126,7 +126,7 @@ const deleteCalendarEvent = async (
       if (error.errors && error.errors[0]?.reason === 'deleted') {
         return;
       }
-      functions.logger.error('Error response from events.delete', {
+      functions.logger.error(new Error('Error response from events.delete'), {
         userId,
         providerCalendarId,
         providerEventId,
@@ -189,7 +189,7 @@ const patchCalendarEvent = async (
       });
     })
     .catch((error) => {
-      functions.logger.error('Error response from events.patch', {
+      functions.logger.error(new Error('Error response from events.patch'), {
         providerCalendarId,
         providerEventId,
         userId,
@@ -228,7 +228,7 @@ const moveCalendarEvent = async (
       return response;
     })
     .catch((error) => {
-      functions.logger.error('Error response from events.move', {
+      functions.logger.error(new Error('Error response from events.move'), {
         providerEventId: providerEventId,
         lastProviderCalendarId: currentProviderCalendarId,
         nextProviderCalendarId,
