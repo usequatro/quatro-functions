@@ -602,7 +602,7 @@ export default functions
         () => true,
         () => {
           functions.logger.info('Nothing to do');
-          return undefined;
+          return null;
         },
       ],
     ])(change);
