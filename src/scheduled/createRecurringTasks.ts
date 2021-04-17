@@ -3,12 +3,13 @@
  */
 
 import * as functions from 'firebase-functions';
-import differenceInWeeks from 'date-fns/differenceInWeeks';
-import differenceInDays from 'date-fns/differenceInDays';
+import differenceInCalendarWeeks from 'date-fns/differenceInCalendarWeeks';
 import differenceInCalendarMonths from 'date-fns/differenceInCalendarMonths';
+import format from 'date-fns/format';
+import parse from 'date-fns/parse';
+import differenceInCalendarDays from 'date-fns/differenceInCalendarDays';
 import addMonths from 'date-fns/addMonths';
 import addDays from 'date-fns/addDays';
-import isToday from 'date-fns/isToday';
 import isSameDay from 'date-fns/isSameDay';
 import getYear from 'date-fns/getYear';
 import setDayOfYear from 'date-fns/setDayOfYear';
@@ -23,16 +24,19 @@ import isSaturday from 'date-fns/isSaturday';
 import isSunday from 'date-fns/isSunday';
 import isAfter from 'date-fns/isAfter';
 import setYear from 'date-fns/setYear';
+import set from 'date-fns/set';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
+import { getUserExternalConfig } from '../repositories/userExternalConfigs';
+import { Task } from '../types/task';
 import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types/recurringConfig';
+import { TaskSources } from '../types';
 
-export const applies = (
-  recurringConfig: RecurringConfig,
-  taskScheduledStart: number,
-  now: number,
-): boolean => {
-  const { unit, amount, activeWeekdays } = recurringConfig;
+const TIME_FORMAT = 'HH:mm';
+
+export const appliesToDate = (recurringConfig: RecurringConfig, date: number): boolean => {
+  const { unit, amount, activeWeekdays, referenceDate } = recurringConfig;
 
   if (!unit) {
     throw new Error('Missing unit value');
@@ -40,17 +44,20 @@ export const applies = (
   if (!amount) {
     throw new Error('Missing amount value');
   }
+  if (!referenceDate) {
+    throw new Error('Missing referenceDate value');
+  }
 
   switch (unit) {
     case DurationUnits.Day: {
-      const dayDifference = differenceInDays(now, taskScheduledStart);
+      const dayDifference = differenceInCalendarDays(date, referenceDate);
       return dayDifference % amount === 0;
     }
     case DurationUnits.Week: {
       if (!activeWeekdays) {
         throw new Error('Missing activeWeekdays value for weekly recurrence');
       }
-      const weekDifference = differenceInWeeks(now, taskScheduledStart);
+      const weekDifference = differenceInCalendarWeeks(date, referenceDate, { weekStartsOn: 1 });
       const fulfillsSeparationAmount = weekDifference % amount === 0;
 
       if (!fulfillsSeparationAmount) {
@@ -58,17 +65,17 @@ export const applies = (
       }
 
       return (
-        (isMonday(now) && activeWeekdays[DaysOfWeek.Monday]) ||
-        (isTuesday(now) && activeWeekdays[DaysOfWeek.Tuesday]) ||
-        (isWednesday(now) && activeWeekdays[DaysOfWeek.Wednesday]) ||
-        (isThursday(now) && activeWeekdays[DaysOfWeek.Thursday]) ||
-        (isFriday(now) && activeWeekdays[DaysOfWeek.Friday]) ||
-        (isSaturday(now) && activeWeekdays[DaysOfWeek.Saturday]) ||
-        (isSunday(now) && activeWeekdays[DaysOfWeek.Sunday])
+        (isMonday(date) && activeWeekdays[DaysOfWeek.Monday]) ||
+        (isTuesday(date) && activeWeekdays[DaysOfWeek.Tuesday]) ||
+        (isWednesday(date) && activeWeekdays[DaysOfWeek.Wednesday]) ||
+        (isThursday(date) && activeWeekdays[DaysOfWeek.Thursday]) ||
+        (isFriday(date) && activeWeekdays[DaysOfWeek.Friday]) ||
+        (isSaturday(date) && activeWeekdays[DaysOfWeek.Saturday]) ||
+        (isSunday(date) && activeWeekdays[DaysOfWeek.Sunday])
       );
     }
     case DurationUnits.Month: {
-      const calendarMonthDifference = differenceInCalendarMonths(now, taskScheduledStart);
+      const calendarMonthDifference = differenceInCalendarMonths(date, referenceDate);
       const fulfillsSeparationAmount = calendarMonthDifference % amount === 0;
 
       if (!fulfillsSeparationAmount) {
@@ -76,27 +83,98 @@ export const applies = (
       }
 
       // addMonths() is great because it'll cap at the latest day of month if overflowing the days
-      const applicableDateInThisMonth = addMonths(taskScheduledStart, calendarMonthDifference);
-      if (getDate(now) !== getDate(applicableDateInThisMonth)) {
+      const applicableDateInThisMonth = addMonths(referenceDate, calendarMonthDifference);
+      if (getDate(date) !== getDate(applicableDateInThisMonth)) {
         return false;
       }
 
       // If today is the day, make sure we trigger this after the time
-      return isAfter(now, applicableDateInThisMonth);
+      return isAfter(date, applicableDateInThisMonth);
     }
     default:
       throw new Error(`Unknown unit value "${unit}"`);
   }
 };
 
-const alreadyRunToday = (recurringConfig: RecurringConfig, now: number) =>
-  recurringConfig.lastRunDate && isSameDay(now, recurringConfig.lastRunDate);
+const alreadyCheckedOnDate = (recurringConfig: RecurringConfig, date: number) =>
+  Boolean(recurringConfig.lastRunDate && isSameDay(date, recurringConfig.lastRunDate));
+
+const setTimeInDay = (date: number | Date, time: string, timeZone: string) => {
+  const timedDate = parse(time, TIME_FORMAT, date);
+  const timedDateUtc = zonedTimeToUtc(timedDate, timeZone);
+  const timedDateUtcSharp = set(timedDateUtc, { seconds: 0, milliseconds: 0 });
+  return timedDateUtcSharp.getTime();
+};
 
 export const getNewScheduledStart = (oldScheduledStart: number, now: number): number => {
   const scheduledStartSetToToday = setDayOfYear(oldScheduledStart, getDayOfYear(now));
   const newScheduledStartDate = setYear(scheduledStartSetToToday, getYear(now));
   return newScheduledStartDate.getTime();
 };
+
+const getTimeZone = async (recurringConfig: RecurringConfig) => {
+  const userExternalConfig = await getUserExternalConfig(recurringConfig.userId);
+  if (!userExternalConfig) {
+    throw new Error('Unable to migrate because missing user external config');
+  }
+  const { timeZone } = userExternalConfig;
+  if (!timeZone) {
+    throw new Error('Unable to migrate because missing time zone');
+  }
+  return timeZone;
+};
+
+export const migrateRecurringConfig = async (
+  recurringConfig: RecurringConfig,
+  timeZone: string,
+): Promise<RecurringConfig> => {
+  const task = await findById(recurringConfig.mostRecentTaskId);
+  if (!task) {
+    throw new Error('Unable to migrate because missing task');
+  }
+
+  const migratedRecurringConfig = { ...recurringConfig };
+
+  if (migratedRecurringConfig.referenceDate == null) {
+    if (!task.scheduledStart) {
+      throw new Error('Unable to migrate because missing scheduled start');
+    }
+    migratedRecurringConfig.referenceDate = task.scheduledStart;
+  }
+  if (migratedRecurringConfig.taskDetails == null) {
+    const { userId } = recurringConfig;
+    if (!userId) {
+      throw new Error('Unable to migrate because missing user ID');
+    }
+
+    migratedRecurringConfig.taskDetails = {
+      title: task.title,
+      description: task.description,
+      effort: task.effort,
+      impact: task.impact,
+      scheduledTime: format(
+        utcToZonedTime(migratedRecurringConfig.referenceDate, timeZone),
+        TIME_FORMAT,
+      ),
+      dueOffsetDays: task.due
+        ? differenceInCalendarDays(task.due, migratedRecurringConfig.referenceDate)
+        : null,
+      dueTime: task.due ? format(utcToZonedTime(task.due, timeZone), TIME_FORMAT) : null,
+    };
+  }
+
+  return migratedRecurringConfig;
+};
+
+class Counter {
+  value: number;
+  constructor() {
+    this.value = 0;
+  }
+  increment() {
+    this.value += 1;
+  }
+}
 
 /**
  * Scheduled task for creating recurring tasks
@@ -114,108 +192,106 @@ export default functions.pubsub
     const now = Date.now();
 
     const configsExcludedAlreadyRun = recurringConfigsResult.filter(
-      ([, recurringConfig]) => !alreadyRunToday(recurringConfig, now),
+      ([, recurringConfig]) => !alreadyCheckedOnDate(recurringConfig, now),
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const logRecords: { [key: string]: any } = {};
+    const alreadyCheckedOnDateCount =
+      recurringConfigsResult.length - configsExcludedAlreadyRun.length;
+    const totalCounter = new Counter();
+    const errorCounter = new Counter();
+    const skippedCounter = new Counter();
+    const createdCounter = new Counter();
 
-    for (const [rcId, recurringConfig] of configsExcludedAlreadyRun) {
-      logRecords[rcId] = {
-        rcId,
-        userId: recurringConfig.userId,
-        error: null,
-        mostRecentTaskId: null,
-      };
+    // @todo: remove the '_' and the code to migrate once all recurring configs are migrated
+    for (const [rcId, _recurringConfig] of configsExcludedAlreadyRun) {
+      totalCounter.increment();
+
       try {
-        if (!recurringConfig.mostRecentTaskId) {
-          logRecords[rcId].error = {
-            message: 'No taskId found for recurring config',
-          };
-          continue;
-        }
+        const timeZone = await getTimeZone(_recurringConfig);
 
-        logRecords[rcId].mostRecentTaskId = recurringConfig.mostRecentTaskId;
-
-        const task = await findById(recurringConfig.mostRecentTaskId);
-        if (!task) {
-          // @todo: consider deleting the recurring config here, since it's invalid
-          logRecords[rcId].error = {
-            message: 'No task found for recurringConfig.mostRecentTaskId',
-          };
-          continue;
-        }
-
-        if (!task.scheduledStart) {
-          logRecords[rcId].error = {
-            message: 'No scheduled start for most recent task',
-          };
-          continue;
-        }
-
-        if (!applies(recurringConfig, task.scheduledStart, now)) {
-          logRecords[rcId].skipped = true;
-          logRecords[rcId].skippedReason = 'Not applicable';
-          continue;
-        }
-
-        if (!task.completed) {
-          logRecords[rcId].skipped = true;
-          logRecords[rcId].skippedReason =
-            "Most recent task isn't completed. Marking as already run today";
-
-          // We skip and also flag as already run today, so this won't apply today anymore even if the most recent task
-          // is completed later
-          await updateRecurringConfig(rcId, {
-            lastRunDate: now,
+        let recurringConfig = _recurringConfig;
+        if (!_recurringConfig.referenceDate || !_recurringConfig.taskDetails) {
+          recurringConfig = await migrateRecurringConfig(_recurringConfig, timeZone);
+          functions.logger.debug(`Migrated recurring config ${rcId}`, {
+            original: _recurringConfig,
+            migrated: recurringConfig,
           });
+        }
+
+        if (!appliesToDate(recurringConfig, now)) {
+          functions.logger.debug(`Skipping ${rcId} because not applicable`, { recurringConfig });
+
+          skippedCounter.increment();
           continue;
         }
 
-        const { userId: taskUserId } = task;
-        if (!taskUserId) {
-          logRecords[rcId].error = {
-            message: 'No userId for most recent task',
-          };
-          continue;
-        }
-        if (taskUserId !== recurringConfig.userId) {
-          logRecords[rcId].error = {
-            message: "The userId values of the task and the recurringConfig don't match",
-            recurringConfigUserId: recurringConfig.userId,
-            mostRecentTaskUserId: taskUserId,
-          };
-          continue;
-        }
+        const mostRecentTask = await findById(recurringConfig.mostRecentTaskId);
 
-        if (task.created && isToday(task.created)) {
-          logRecords[rcId].skipped = true;
-          logRecords[rcId].skippedReason = 'The most recent task was created just today';
+        // if it applies, but the last task is incomplete, we don't create the task for today
+        if (mostRecentTask && !mostRecentTask.completed) {
+          // If the time to create this task already passed, we flag the config as run today so we won't
+          // create the task instance today even if the last one is completed.
+          if (setTimeInDay(now, recurringConfig.taskDetails.scheduledTime, timeZone) < now) {
+            functions.logger.debug(
+              `Skipping ${rcId} because last task is still incomplete. Marking as run today because scheduled time is past`,
+              { recurringConfig },
+            );
 
-          // We skip and also flag as already run today, so this won't apply today anymore
-          await updateRecurringConfig(rcId, {
-            lastRunDate: now,
-          });
+            await updateRecurringConfig(rcId, { lastRunDate: now });
+          } else {
+            functions.logger.debug(`Skipping ${rcId} because last task is still incomplete`, {
+              recurringConfig,
+            });
+          }
+          skippedCounter.increment();
           continue;
         }
 
-        const newScheduledStart = getNewScheduledStart(task.scheduledStart, now);
+        // If a recurring task was already created today, we skip it as we dont' want to create 2 instances for the same day
+        if (
+          mostRecentTask &&
+          mostRecentTask.source === TaskSources.RecurringConfig &&
+          mostRecentTask.created &&
+          isSameDay(mostRecentTask.created, now)
+        ) {
+          functions.logger.debug(
+            `Skipping ${rcId} recurring instance was already created today ${recurringConfig.mostRecentTaskId}`,
+            { recurringConfig, mostRecentTask },
+          );
 
-        const newDue = task.due
-          ? addDays(task.due, differenceInDays(newScheduledStart, task.scheduledStart)).getTime()
-          : null;
+          await updateRecurringConfig(rcId, { lastRunDate: now });
+          skippedCounter.increment();
+          continue;
+        }
 
-        const newTask = {
-          ...task,
-          title: task.title,
-          created: Date.now(),
+        const newScheduledStart = setTimeInDay(
+          now,
+          recurringConfig.taskDetails.scheduledTime,
+          timeZone,
+        );
+        const newDue =
+          recurringConfig.taskDetails.dueOffsetDays != null && recurringConfig.taskDetails.dueTime
+            ? setTimeInDay(
+                addDays(newScheduledStart, recurringConfig.taskDetails.dueOffsetDays),
+                recurringConfig.taskDetails.dueTime,
+                timeZone,
+              )
+            : null;
+
+        const newTask: Partial<Task> = {
+          title: recurringConfig.taskDetails.title,
+          description: recurringConfig.taskDetails.description,
+          effort: recurringConfig.taskDetails.effort,
+          impact: recurringConfig.taskDetails.impact,
           scheduledStart: newScheduledStart,
           due: newDue,
           completed: null,
           snoozedUntil: null,
           recurringConfigId: rcId,
+          source: TaskSources.RecurringConfig,
         };
-        const newTaskId = await create(taskUserId, newTask);
+        const newTaskId = await create(recurringConfig.userId, newTask);
+        createdCounter.increment();
 
         await updateRecurringConfig(rcId, {
           // update lastRunDate so that we don't create duplicates for the same day
@@ -224,30 +300,23 @@ export default functions.pubsub
           mostRecentTaskId: newTaskId,
         });
 
-        logRecords[rcId].taskCreated = true;
-        logRecords[rcId].newTaskId = newTaskId;
+        functions.logger.info(`Created recurring task ${newTaskId} for config ${rcId}`, {
+          recurringConfig,
+          newTask,
+        });
       } catch (error) {
-        logRecords[rcId].error = {
-          message: `Runtime error: ${error.message}`,
+        functions.logger.error(new Error(`Runtime error: ${error.message}`), {
           error,
-        };
+          rcId,
+          _recurringConfig,
+        });
+        errorCounter.increment();
       }
     }
 
-    const errors = Object.values(logRecords).filter((logRecord) => logRecord.error);
-
-    functions.logger.info('Recurring tasks processed', {
-      length: Object.keys(logRecords).length,
-      errorsLength: errors.length,
-      data: logRecords,
-    });
-
-    if (errors.length > 0) {
-      functions.logger.error('Errors processing recurring tasks', {
-        length: errors.length,
-        data: errors,
-      });
-    }
+    functions.logger.info(
+      `Recurring tasks processed. total=${totalCounter.value} created=${createdCounter.value} skipped=${skippedCounter.value} errors=${errorCounter.value} skippedAlreadyRunToday=${alreadyCheckedOnDateCount}`,
+    );
 
     return null;
   });

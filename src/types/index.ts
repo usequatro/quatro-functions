@@ -6,6 +6,11 @@ export enum CalendarProvider {
   Google = 'google',
 }
 
+export enum TaskSources {
+  User = 'user',
+  RecurringConfig = 'recurringConfig',
+}
+
 // Active Campaign types
 // export type AcList = {
 //   id: string;

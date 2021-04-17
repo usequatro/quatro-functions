@@ -31,12 +31,14 @@ export type RecurringConfig = {
   amount: number;
   lastRunDate?: number | null;
   activeWeekdays?: ActiveWeekdays;
-  // taskDetails?: {
-  //   title: string;
-  //   description: string;
-  //   effort: number;
-  //   impact: number;
-  //   dueOffsetDays: number;
-  //   dueTime: string;
-  // };
+  referenceDate: number;
+  taskDetails: {
+    title: string;
+    description: string;
+    effort: number;
+    impact: number;
+    scheduledTime: string;
+    dueOffsetDays: number | null;
+    dueTime: string | null;
+  };
 };
