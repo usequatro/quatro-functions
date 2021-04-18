@@ -23,12 +23,12 @@ export const recurringConfigSchema = object({
   referenceDate: number(),
 
   taskDetails: object({
+    scheduledTime: string(),
     title: string(),
     description: string().allow('').default(''),
     effort: number().integer().custom(clampNumber(0, 3), 'clampNumber'),
     impact: number().integer().custom(clampNumber(0, 3), 'clampNumber'),
-    dueOffsetDays: number(),
-    dueTime: string(),
-    scheduledTime: string(),
+    dueOffsetDays: number().allow(null),
+    dueTime: string().allow(null),
   }),
 });
