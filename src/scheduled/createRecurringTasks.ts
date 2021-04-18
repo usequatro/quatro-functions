@@ -3,6 +3,7 @@
  */
 
 import * as functions from 'firebase-functions';
+import Mixpanel from 'mixpanel';
 import differenceInCalendarWeeks from 'date-fns/differenceInCalendarWeeks';
 import differenceInCalendarMonths from 'date-fns/differenceInCalendarMonths';
 import format from 'date-fns/format';
@@ -303,6 +304,25 @@ export default functions.pubsub
         functions.logger.info(`Created recurring task ${newTaskId} for config ${rcId}`, {
           recurringConfig,
           newTask,
+        });
+
+        const mixpanel = Mixpanel.init(functions.config().mixpanel.token);
+        mixpanel.track('Repeating Task Created', {
+          hasScheduledStart: Boolean(newTask.scheduledStart),
+          hasSnoozedUntil: Boolean(newTask.snoozedUntil),
+          hasDueDate: Boolean(newTask.due),
+          hasDescription: Boolean(newTask.description),
+          isRecurring: true,
+          hasBlockers: false,
+          hasCalendarBlock: false,
+          impact: newTask.impact,
+          effort: newTask.effort,
+          timeZone,
+          scheduledTime: recurringConfig.taskDetails.scheduledTime,
+          dueOffsetDays: recurringConfig.taskDetails.dueOffsetDays,
+          dueTime: recurringConfig.taskDetails.dueTime,
+          unit: recurringConfig.unit,
+          amount: recurringConfig.amount,
         });
       } catch (error) {
         functions.logger.error(new Error(`Runtime error: ${error.message}`), {
