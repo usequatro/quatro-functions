@@ -1,5 +1,5 @@
 import { object, string, number, array, alternatives, valid } from 'joi';
-import { CalendarProvider } from '../types/index';
+import { CalendarProvider, TaskSources } from '../types/index';
 import { TaskBlockedByTypes } from '../types/task';
 
 export const clampNumber = (min: number, max: number) => (value: number): number =>
@@ -19,6 +19,8 @@ export const taskSchema = object({
   scheduledStart: number().allow(null),
   snoozedUntil: number().allow(null),
   description: string().allow(''),
+
+  source: valid(...Object.values(TaskSources)),
 
   // these can be empty and we add defaults
   completed: number().allow(null).default(null),

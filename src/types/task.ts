@@ -1,4 +1,4 @@
-import { CalendarProvider } from './';
+import { CalendarProvider, TaskSources } from './';
 
 export enum TaskBlockedByTypes {
   Task = 'task',
@@ -11,6 +11,7 @@ export type Task = {
   effort: number;
   impact: number;
   description: string;
+  source: TaskSources;
   due: number | null;
   created: number | null;
   completed: number | null;

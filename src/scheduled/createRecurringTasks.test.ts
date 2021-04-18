@@ -4,117 +4,135 @@ import set from 'date-fns/set';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 
-import { DurationUnits, DaysOfWeek } from '../types/recurringConfig';
-import { applies, getNewScheduledStart } from './createRecurringTasks';
+import { DurationUnits, DaysOfWeek, RecurringConfig } from '../types/recurringConfig';
+import { appliesToDate, getNewScheduledStart } from './createRecurringTasks';
+
+const testRecurringConfig: RecurringConfig = {
+  mostRecentTaskId: '123456',
+  userId: 'abcdef',
+  unit: DurationUnits.Day,
+  amount: 1,
+  referenceDate: sub(new Date(), { days: 10 }).getTime(),
+  taskDetails: {
+    title: 'Do laundry',
+    description: '',
+    effort: 2,
+    impact: 0,
+    scheduledTime: '10:00',
+    dueOffsetDays: null,
+    dueTime: null,
+  },
+};
 
 describe('createRecurringTasks', () => {
-  describe('#applies', () => {
+  describe('#appliesToDate', () => {
     it('should apply to an every day configuration', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Day,
-            amount: 1,
-          },
-          sub(new Date(), { days: 10 }).getTime(),
-          Date.now(),
-        ),
-      ).toBe(true);
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Day,
+          amount: 1,
+          referenceDate: sub(new Date(), { days: 10 }).getTime(),
+        },
+        Date.now(),
+      );
+      expect(result).toBe(true);
     });
 
     it('should not apply when the the day difference is not the amount specified', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Day,
-            amount: 3,
-          },
-          sub(new Date(), { days: 4 }).getTime(),
-          Date.now(),
-        ),
-      ).toBe(false);
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Day,
+          amount: 3,
+          referenceDate: sub(new Date(), { days: 4 }).getTime(),
+        },
+        Date.now(),
+      );
+      expect(result).toBe(false);
     });
 
     it('should apply to this Monday if we re doing it all Mondays', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Week,
-            amount: 1,
-            activeWeekdays: {
-              [DaysOfWeek.Monday]: true,
-              [DaysOfWeek.Tuesday]: false,
-              [DaysOfWeek.Wednesday]: false,
-              [DaysOfWeek.Thursday]: false,
-              [DaysOfWeek.Friday]: false,
-              [DaysOfWeek.Saturday]: false,
-              [DaysOfWeek.Sunday]: false,
-            },
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Week,
+          amount: 1,
+          activeWeekdays: {
+            [DaysOfWeek.Monday]: true,
+            [DaysOfWeek.Tuesday]: false,
+            [DaysOfWeek.Wednesday]: false,
+            [DaysOfWeek.Thursday]: false,
+            [DaysOfWeek.Friday]: false,
+            [DaysOfWeek.Saturday]: false,
+            [DaysOfWeek.Sunday]: false,
           },
-          set(sub(new Date(), { days: 100 }), { hours: 10, minutes: 0 }).getTime(),
-          set(startOfWeek(new Date(), { weekStartsOn: 1 }), { hours: 11, minutes: 0 }).getTime(),
-        ),
-      ).toBe(true);
+          referenceDate: set(sub(new Date(), { days: 100 }), { hours: 10, minutes: 0 }).getTime(),
+        },
+        set(startOfWeek(new Date(), { weekStartsOn: 1 }), { hours: 11, minutes: 0 }).getTime(),
+      );
+      expect(result).toBe(true);
     });
 
     it('should not apply to this Monday if we re doing it all Weekends', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Week,
-            amount: 1,
-            activeWeekdays: {
-              [DaysOfWeek.Monday]: false,
-              [DaysOfWeek.Tuesday]: false,
-              [DaysOfWeek.Wednesday]: false,
-              [DaysOfWeek.Thursday]: false,
-              [DaysOfWeek.Friday]: false,
-              [DaysOfWeek.Saturday]: true,
-              [DaysOfWeek.Sunday]: true,
-            },
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Week,
+          amount: 1,
+          activeWeekdays: {
+            [DaysOfWeek.Monday]: false,
+            [DaysOfWeek.Tuesday]: false,
+            [DaysOfWeek.Wednesday]: false,
+            [DaysOfWeek.Thursday]: false,
+            [DaysOfWeek.Friday]: false,
+            [DaysOfWeek.Saturday]: true,
+            [DaysOfWeek.Sunday]: true,
           },
-          set(sub(new Date(), { days: 100 }), { hours: 10, minutes: 0 }).getTime(),
-          set(startOfWeek(new Date(), { weekStartsOn: 1 }), { hours: 11, minutes: 0 }).getTime(),
-        ),
-      ).toBe(false);
+          referenceDate: set(sub(new Date(), { days: 100 }), { hours: 10, minutes: 0 }).getTime(),
+        },
+        set(startOfWeek(new Date(), { weekStartsOn: 1 }), { hours: 11, minutes: 0 }).getTime(),
+      );
+      expect(result).toBe(false);
     });
 
     it('should not apply to the day before the reference date of the month', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Month,
-            amount: 1,
-          },
-          set(new Date(), { date: 15, year: 2019, month: 2, hours: 10, minutes: 0 }).getTime(),
-          set(new Date(), { date: 14, hours: 11, minutes: 0 }).getTime(),
-        ),
-      ).toBe(false);
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Month,
+          amount: 1,
+          referenceDate: set(new Date(), {
+            date: 15,
+            year: 2019,
+            month: 2,
+            hours: 10,
+            minutes: 0,
+          }).getTime(),
+        },
+        set(new Date(), { date: 14, hours: 11, minutes: 0 }).getTime(),
+      );
+
+      expect(result).toBe(false);
     });
 
     it('should apply to this date of the month', () => {
-      expect(
-        applies(
-          {
-            mostRecentTaskId: '123456',
-            userId: 'abcdef',
-            unit: DurationUnits.Month,
-            amount: 1,
-          },
-          set(new Date(), { date: 15, year: 2019, month: 2, hours: 10, minutes: 0 }).getTime(),
-          set(new Date(), { date: 15, hours: 11, minutes: 0 }).getTime(),
-        ),
-      ).toBe(true);
+      const result = appliesToDate(
+        {
+          ...testRecurringConfig,
+          unit: DurationUnits.Month,
+          amount: 1,
+          referenceDate: set(new Date(), {
+            date: 15,
+            year: 2019,
+            month: 2,
+            hours: 10,
+            minutes: 0,
+          }).getTime(),
+        },
+        set(new Date(), { date: 15, hours: 11, minutes: 0 }).getTime(),
+      );
+      expect(result).toBe(true);
     });
   });
 

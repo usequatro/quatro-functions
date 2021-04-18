@@ -84,7 +84,6 @@ export const create = async (userId: string, task: Partial<Task>): Promise<strin
     },
     {
       stripUnknown: true,
-      noDefaults: true,
     },
   );
 
