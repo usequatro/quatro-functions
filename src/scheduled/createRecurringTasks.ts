@@ -142,12 +142,8 @@ export const migrateRecurringConfig = async (
     }
     migratedRecurringConfig.referenceDate = task.scheduledStart;
   }
-  if (migratedRecurringConfig.taskDetails == null) {
-    const { userId } = recurringConfig;
-    if (!userId) {
-      throw new Error('Unable to migrate because missing user ID');
-    }
 
+  if (migratedRecurringConfig.taskDetails == null) {
     migratedRecurringConfig.taskDetails = {
       title: task.title,
       description: task.description,
@@ -325,8 +321,7 @@ export default functions.pubsub
           amount: recurringConfig.amount,
         });
       } catch (error) {
-        functions.logger.error(new Error(`Runtime error: ${error.message}`), {
-          error,
+        functions.logger.error(error, {
           rcId,
           _recurringConfig,
         });
