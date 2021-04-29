@@ -27,7 +27,7 @@ import isAfter from 'date-fns/isAfter';
 import setYear from 'date-fns/setYear';
 import set from 'date-fns/set';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
+import { findAll, updateRecurringConfig } from '../repositories/recurringConfigs';
 import { findById, create } from '../repositories/tasks';
 import { getUserExternalConfig } from '../repositories/userExternalConfigs';
 import { Task } from '../types/task';
@@ -126,6 +126,7 @@ const getTimeZone = async (recurringConfig: RecurringConfig) => {
 };
 
 export const migrateRecurringConfig = async (
+  rcId: string,
   recurringConfig: RecurringConfig,
   timeZone: string,
 ): Promise<RecurringConfig> => {
@@ -159,6 +160,12 @@ export const migrateRecurringConfig = async (
       dueTime: task.due ? format(utcToZonedTime(task.due, timeZone), TIME_FORMAT) : null,
     };
   }
+
+  await updateRecurringConfig(rcId, migratedRecurringConfig, { merge: false });
+  functions.logger.info(`Migrated recurring config ${rcId}`, {
+    original: recurringConfig,
+    migrated: migratedRecurringConfig,
+  });
 
   return migratedRecurringConfig;
 };
@@ -208,11 +215,7 @@ export default functions.pubsub
 
         let recurringConfig = _recurringConfig;
         if (!_recurringConfig.referenceDate || !_recurringConfig.taskDetails) {
-          recurringConfig = await migrateRecurringConfig(_recurringConfig, timeZone);
-          functions.logger.debug(`Migrated recurring config ${rcId}`, {
-            original: _recurringConfig,
-            migrated: recurringConfig,
-          });
+          recurringConfig = await migrateRecurringConfig(rcId, _recurringConfig, timeZone);
         }
 
         if (!appliesToDate(recurringConfig, now)) {

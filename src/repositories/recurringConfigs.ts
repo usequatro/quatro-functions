@@ -61,7 +61,11 @@ export const create = async (
   return [docSnapshot.id, docSnapshot.data() as RecurringConfig];
 };
 
-export const update = async (rcId: string, updates: Partial<RecurringConfig>): Promise<void> => {
+export const updateRecurringConfig = async (
+  rcId: string,
+  updates: Partial<RecurringConfig>,
+  { merge = true } = {},
+): Promise<void> => {
   const validatedUpdates = await recurringConfigSchema.validateAsync(updates, {
     stripUnknown: true,
     noDefaults: true,
@@ -71,7 +75,7 @@ export const update = async (rcId: string, updates: Partial<RecurringConfig>): P
   const db = admin.firestore();
 
   const docRef = await db.collection(COLLECTION).doc(rcId);
-  await docRef.set(validatedUpdates, { merge: true });
+  await docRef.set(validatedUpdates, { merge });
   return;
 };
 
