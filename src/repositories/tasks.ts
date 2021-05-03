@@ -6,7 +6,7 @@ import admin from 'firebase-admin';
 import { taskSchema } from '../schemas/task';
 import { Task } from '../types/task';
 
-const COLLECTION = 'tasks';
+export const TASKS_COLLECTION = 'tasks';
 
 const KEY_DEFAULTS = {
   blockedBy: [],
@@ -25,7 +25,7 @@ const KEY_DEFAULTS = {
 export const findById = async (id: string): Promise<Task | undefined> => {
   const db = admin.firestore();
 
-  const docRef = db.collection(COLLECTION).doc(id);
+  const docRef = db.collection(TASKS_COLLECTION).doc(id);
   const docSnapshot = await docRef.get();
 
   return docSnapshot.exists ? <Task>docSnapshot.data() : undefined;
@@ -34,7 +34,7 @@ export const findById = async (id: string): Promise<Task | undefined> => {
 export const findTasksByUserId = async (userId: string): Promise<[string, Task][]> => {
   const snapshot = await admin
     .firestore()
-    .collection(COLLECTION)
+    .collection(TASKS_COLLECTION)
     .where('userId', '==', userId)
     .get();
   return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
@@ -46,7 +46,7 @@ export const findLastByRecurringConfigId = async (
   const db = admin.firestore();
 
   const query = db
-    .collection(COLLECTION)
+    .collection(TASKS_COLLECTION)
     .where('recurringConfigId', '==', recurringConfigId)
     .orderBy('created', 'desc')
     .limit(1);
@@ -64,7 +64,7 @@ export const findIncompleteByCalendarBlockCalendarId = async (
   const db = admin.firestore();
 
   const query = db
-    .collection(COLLECTION)
+    .collection(TASKS_COLLECTION)
     .where('userId', '==', userId)
     .where('calendarBlockCalendarId', '==', calendarBlockCalendarId)
     .where('completed', '==', null)
@@ -88,7 +88,7 @@ export const create = async (userId: string, task: Partial<Task>): Promise<strin
   );
 
   const db = admin.firestore();
-  const docRef = await db.collection(COLLECTION).add(validPayload);
+  const docRef = await db.collection(TASKS_COLLECTION).add(validPayload);
   return docRef.id;
 };
 
@@ -99,9 +99,9 @@ export const update = async (id: string, task: Partial<Task>): Promise<undefined
     presence: 'optional',
   });
   const db = admin.firestore();
-  await db.collection(COLLECTION).doc(id).update(validPayload);
+  await db.collection(TASKS_COLLECTION).doc(id).update(validPayload);
   return;
 };
 
 export const deleteTask = (id: string): Promise<FirebaseFirestore.WriteResult> =>
-  admin.firestore().collection(COLLECTION).doc(id).delete();
+  admin.firestore().collection(TASKS_COLLECTION).doc(id).delete();

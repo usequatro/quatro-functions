@@ -18,6 +18,9 @@ import trackDeleteCalendar from './triggers/trackDeleteCalendar';
 import syncTaskWithGoogleCalendar from './triggers/syncTaskWithGoogleCalendar';
 import watchCalendar from './triggers/watchCalendar';
 import unwatchCalendar from './triggers/unwatchCalendar';
+import trackTaskOnCreate from './triggers/trackTaskOnCreate';
+import trackTaskOnDelete from './triggers/trackTaskOnDelete';
+import trackTaskOnUpdate from './triggers/trackTaskOnUpdate';
 
 admin.initializeApp(functions.config().firebase);
 
@@ -39,6 +42,9 @@ export {
   trackDeleteAcUser,
   // trackCreateCalendar,
   trackDeleteCalendar,
+  trackTaskOnCreate,
+  trackTaskOnDelete,
+  trackTaskOnUpdate,
   syncTaskWithGoogleCalendar,
   watchCalendar,
   unwatchCalendar,
