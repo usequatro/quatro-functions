@@ -307,6 +307,7 @@ export default functions.pubsub
 
         const mixpanel = Mixpanel.init(functions.config().mixpanel.token);
         mixpanel.track('Repeating Task Created', {
+          distinct_id: recurringConfig.userId,
           hasScheduledStart: Boolean(newTask.scheduledStart),
           hasSnoozedUntil: Boolean(newTask.snoozedUntil),
           hasDueDate: Boolean(newTask.due),
