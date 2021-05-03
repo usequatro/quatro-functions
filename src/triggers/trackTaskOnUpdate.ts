@@ -43,7 +43,7 @@ export default functions
     const titleChanged = beforeTask.title !== afterTask.title;
     const descriptionChanged = beforeTask.description !== afterTask.description;
     const scheduledStartChanged = beforeTask.scheduledStart !== afterTask.scheduledStart;
-    const blockedByChanged = isEqual(beforeTask.blockedBy, afterTask.blockedBy);
+    const blockedByChanged = !isEqual(beforeTask.blockedBy, afterTask.blockedBy);
     const dueChanged = beforeTask.due !== afterTask.due;
     const effortChanged = beforeTask.effort !== afterTask.effort;
     const impactChanged = beforeTask.impact !== afterTask.impact;
