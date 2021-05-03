@@ -15,6 +15,7 @@ export type Task = {
   due: number | null;
   created: number | null;
   completed: number | null;
+  prioritizedAheadOf?: string | null;
   scheduledStart: number | null;
   snoozedUntil: number | null;
   blockedBy: Array<string>;
