@@ -19,7 +19,7 @@ export default functions
       hasScheduledStart: Boolean(task.scheduledStart),
       hasSnoozedUntil: Boolean(task.snoozedUntil),
       hasDueDate: Boolean(task.due),
-      isRecurring: task.recurringConfigId,
+      isRecurring: Boolean(task.recurringConfigId),
       hasCalendarBlock: Boolean(task.calendarBlockStart && task.calendarBlockEnd),
       hasDescription: Boolean(task.description),
       impact: task.impact,
