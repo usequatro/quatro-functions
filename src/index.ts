@@ -6,18 +6,18 @@ import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
 // import slack from './slack/app';
-import notifyGoogleCalendarChange from './https/notifyGoogleCalendarChange';
-import processProviderUnlink from './callable/processProviderUnlink';
-import storeAuthCode from './callable/storeAuthCode';
-import createRecurringTasks from './scheduled/createRecurringTasks';
-import renewGoogleCalendarWatchers from './scheduled/renewGoogleCalendarWatchers';
+import notifyGoogleCalendarChange from './functions/https/notifyGoogleCalendarChange';
+import processProviderUnlink from './functions/callable/processProviderUnlink';
+import storeAuthCode from './functions/callable/storeAuthCode';
+import createRecurringTasks from './functions/scheduled/createRecurringTasks';
+import renewGoogleCalendarWatchers from './functions/scheduled/renewGoogleCalendarWatchers';
 // import trackNewAcUser from './triggers/trackNewAcUser';
-import trackDeleteAcUser from './triggers/trackDeleteAcUser';
+import trackDeleteAcUser from './functions/triggers/trackDeleteAcUser';
 // import trackCreateCalendar from './triggers/trackCreateCalendar';
-import trackDeleteCalendar from './triggers/trackDeleteCalendar';
-import syncTaskWithGoogleCalendar from './triggers/syncTaskWithGoogleCalendar';
-import watchCalendar from './triggers/watchCalendar';
-import unwatchCalendar from './triggers/unwatchCalendar';
+import trackDeleteCalendar from './functions/triggers/trackDeleteCalendar';
+import syncTaskWithGoogleCalendar from './functions/triggers/syncTaskWithGoogleCalendar';
+import watchCalendar from './functions/triggers/watchCalendar';
+import unwatchCalendar from './functions/triggers/unwatchCalendar';
 
 admin.initializeApp(functions.config().firebase);
 

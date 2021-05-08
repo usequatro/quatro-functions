@@ -23,9 +23,9 @@ import isSaturday from 'date-fns/isSaturday';
 import isSunday from 'date-fns/isSunday';
 import isAfter from 'date-fns/isAfter';
 import setYear from 'date-fns/setYear';
-import { findAll, update as updateRecurringConfig } from '../repositories/recurringConfigs';
-import { findById, create } from '../repositories/tasks';
-import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types';
+import { findAll, update as updateRecurringConfig } from '../../repositories/recurringConfigs';
+import { findById, create } from '../../repositories/tasks';
+import { RecurringConfig, DurationUnits, DaysOfWeek } from '../../types';
 
 export const applies = (
   recurringConfig: RecurringConfig,
@@ -207,6 +207,7 @@ export default functions.pubsub
 
         const newTask = {
           ...task,
+          userId: taskUserId,
           title: task.title,
           created: Date.now(),
           scheduledStart: newScheduledStart,
@@ -215,7 +216,7 @@ export default functions.pubsub
           snoozedUntil: null,
           recurringConfigId: rcId,
         };
-        const newTaskId = await create(taskUserId, newTask);
+        const newTaskId = await create(newTask);
 
         await updateRecurringConfig(rcId, {
           // update lastRunDate so that we don't create duplicates for the same day

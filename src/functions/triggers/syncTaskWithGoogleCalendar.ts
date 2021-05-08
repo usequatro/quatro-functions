@@ -4,12 +4,12 @@ import { google } from 'googleapis';
 import formatISO from 'date-fns/formatISO';
 import cond from 'lodash/cond';
 
-import REGION from '../constants/region';
-import { update as updateTask } from '../repositories/tasks';
-import { Task } from '../schemas/task';
-import { getCalendarById, updateCalendar } from '../repositories/calendars';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
-import { CalendarProviders } from '../constants/calendarProviders';
+import REGION from '../../constants/region';
+import { update as updateTask } from '../../repositories/tasks';
+import { Task } from '../../schemas/task';
+import { getCalendarById, updateCalendar } from '../../repositories/calendars';
+import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
+import { CalendarProviders } from '../../constants/calendarProviders';
 
 const { hostname } = functions.config().app || {};
 

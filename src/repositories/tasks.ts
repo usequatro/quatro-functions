@@ -73,13 +73,12 @@ export const findIncompleteByCalendarBlockCalendarId = async (
   return querySnapshot.docs.map((doc) => [doc.id, <Task>doc.data()]);
 };
 
-export const create = async (userId: string, task: Task): Promise<string> => {
+export const create = async (task: Task): Promise<string> => {
   const validPayload = await taskSchema.validateAsync(
     {
       ...KEY_DEFAULTS,
       ...task,
       created: Date.now(),
-      userId,
     },
     {
       stripUnknown: true,

@@ -3,15 +3,15 @@ import admin from 'firebase-admin';
 import cors from 'cors';
 
 // import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
-import REGION from '../constants/region';
-import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
+import REGION from '../../constants/region';
+import { deleteCalendar, findCalendarsByUserId } from '../../repositories/calendars';
 import {
   // getUserInternalConfig,
   updateUserInternalConfig,
-} from '../repositories/userInternalConfigs';
+} from '../../repositories/userInternalConfigs';
 // import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
-import { updateUserExternalConfig } from '../repositories/userExternalConfigs';
-import { CalendarProviders } from '../constants/calendarProviders';
+import { updateUserExternalConfig } from '../../repositories/userExternalConfigs';
+import { CalendarProviders } from '../../constants/calendarProviders';
 
 cors({ origin: true });
 

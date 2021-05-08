@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 
-import { create } from '../repositories/tasks';
+import { create } from '../../repositories/tasks';
 import sendSlackResponse from './sendSlackResponse';
-import { findBySlackUserId } from '../repositories/users';
+import { findBySlackUserId } from '../../repositories/users';
 
 const handleCreateTask = async (req: Request, res: Response): Promise<Response> => {
   const { text, user_id: slackUserId } = req.body;
@@ -28,7 +28,8 @@ const handleCreateTask = async (req: Request, res: Response): Promise<Response> 
 
     const [userId] = await findBySlackUserId(slackUserId);
 
-    const taskId = await create(userId, {
+    const taskId = await create({
+      userId,
       title,
       impact: parseInt(impact, 10),
       effort: parseInt(effort, 10),

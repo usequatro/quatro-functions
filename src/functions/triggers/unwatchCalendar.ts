@@ -2,10 +2,10 @@ import * as functions from 'firebase-functions';
 import { google } from 'googleapis';
 import isPast from 'date-fns/isPast';
 
-import REGION from '../constants/region';
-import { COLLECTION as CALENDARS_COLLECTION } from '../repositories/calendars';
-import { Calendar } from '../schemas/calendar';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
+import REGION from '../../constants/region';
+import { COLLECTION as CALENDARS_COLLECTION } from '../../repositories/calendars';
+import { Calendar } from '../../schemas/calendar';
+import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
 
 export default functions
   .region(REGION)

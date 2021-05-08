@@ -4,12 +4,12 @@ import { google } from 'googleapis';
 import sub from 'date-fns/sub';
 import formatISO from 'date-fns/formatISO';
 
-import REGION from '../constants/region';
-import { findCalendarByWatcher, updateCalendar } from '../repositories/calendars';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
-import parseGoogleCalendarDate from '../utils/parseGoogleCalendarDate';
-import { findById, update } from '../repositories/tasks';
-import { CalendarProviders } from '../constants/calendarProviders';
+import REGION from '../../constants/region';
+import { findCalendarByWatcher, updateCalendar } from '../../repositories/calendars';
+import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
+import parseGoogleCalendarDate from '../../utils/parseGoogleCalendarDate';
+import { findById, update } from '../../repositories/tasks';
+import { CalendarProviders } from '../../constants/calendarProviders';
 
 // Enable cors requests
 cors({ origin: true });
