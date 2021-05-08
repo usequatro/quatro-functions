@@ -7,8 +7,8 @@ import {
   findCalendarsWithExpiringGoogleCalendarChannel,
   updateCalendar,
   deleteCalendar,
-} from '../repositories/calendars';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
+} from '../../repositories/calendars';
+import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
 
 const THRESHOLD_HOURS = 3;
 const hoursToMillis = (hours: number) => hours * 60 * 60 * 1000;

@@ -1,18 +1,18 @@
 import * as functions from 'firebase-functions';
 
 // import { deleteContact } from '../utils/activeCampaignApi';
-import REGION from '../constants/region';
+import REGION from '../../constants/region';
 import {
   deleteUserInternalConfig,
   // getUserInternalConfig,
-} from '../repositories/userInternalConfigs';
-import { deleteUserExternalConfig } from '../repositories/userExternalConfigs';
-import { deleteCalendar, findCalendarsByUserId } from '../repositories/calendars';
+} from '../../repositories/userInternalConfigs';
+import { deleteUserExternalConfig } from '../../repositories/userExternalConfigs';
+import { deleteCalendar, findCalendarsByUserId } from '../../repositories/calendars';
 import {
   deleteRecurringConfig,
   findRecurringConfigsByUserId,
-} from '../repositories/recurringConfigs';
-import { deleteTask, findTasksByUserId } from '../repositories/tasks';
+} from '../../repositories/recurringConfigs';
+import { deleteTask, findTasksByUserId } from '../../repositories/tasks';
 
 // @link https://firebase.google.com/docs/functions/auth-events
 export default functions

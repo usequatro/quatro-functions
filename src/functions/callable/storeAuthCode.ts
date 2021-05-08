@@ -1,9 +1,9 @@
 import * as functions from 'firebase-functions';
 import { google } from 'googleapis';
 
-import REGION from '../constants/region';
-import { setUserInternalConfig } from '../repositories/userInternalConfigs';
-import { setUserExternalConfig } from '../repositories/userExternalConfigs';
+import REGION from '../../constants/region';
+import { setUserInternalConfig } from '../../repositories/userInternalConfigs';
+import { setUserExternalConfig } from '../../repositories/userExternalConfigs';
 
 const { clientid, clientsecret } = functions.config().googleapis || {};
 if (!clientid) {

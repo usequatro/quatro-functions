@@ -1,14 +1,13 @@
-
 import { Request, Response } from 'express';
 import sendSlackResponse from './sendSlackResponse';
-import { findByEmail, findBySlackUserId, setSlackUserId } from '../repositories/users';
+import { findByEmail, findBySlackUserId, setSlackUserId } from '../../repositories/users';
 
 /**
  * @TODO: improve sign in
  * GitHub signin.js https://github.com/integrations/slack/blob/0cf2d12a7e307bb360b45265e90bcc8ef81e31ab/lib/slack/commands/signin.js
  */
 
-const extractEmailAddress = (text : string) : string | undefined => {
+const extractEmailAddress = (text: string): string | undefined => {
   // Slack format: <mailto:gpuenteallott+test1@gmail.com|gpuenteallott+test1@gmail.com>
   const matches = /^<mailto:([^@]+@[^@]+\.[a-z0-9]{1,4})\|.*>$/.exec(text);
   if (matches && matches[1]) {
@@ -23,10 +22,7 @@ const extractEmailAddress = (text : string) : string | undefined => {
 
 export const signin = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const {
-      text,
-      user_id: slackUserId,
-    } = req.body;
+    const { text, user_id: slackUserId } = req.body;
     const receivedEmail = text.replace(/^signin\s/, '').trim();
     const accountEmailAddress = extractEmailAddress(receivedEmail);
 
@@ -40,13 +36,15 @@ export const signin = async (req: Request, res: Response): Promise<Response> => 
     try {
       const [alreadyConnectedUserId] = await findBySlackUserId(slackUserId);
       if (alreadyConnectedUserId) {
-        throw new Error('Slack account already connected. Sign out first before connecting to another email address');
+        throw new Error(
+          'Slack account already connected. Sign out first before connecting to another email address',
+        );
       }
     } catch (error) {
       //
     }
 
-    const [userId,] = await findByEmail(accountEmailAddress);
+    const [userId] = await findByEmail(accountEmailAddress);
     await setSlackUserId(userId, slackUserId);
 
     console.log(`[POST slack/signin] Success. userId=${userId} slackUserId=${slackUserId}`);
