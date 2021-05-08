@@ -1,16 +1,19 @@
 import * as functions from 'firebase-functions';
 
-import { Calendar } from '../types/calendar';
+import { Calendar } from '../../types/calendar';
 // import { setCustomFieldValue } from '../utils/activeCampaignApi';
 // import { CALENDARS_FIELD } from '../constants/activeCampaign';
 import {
   // findUserCalendarsCount,
   COLLECTION as CALENDARS_COLLECTION,
-} from '../repositories/calendars';
+} from '../../repositories/calendars';
 // import { getUserInternalConfig } from '../repositories/userInternalConfigs';
-import REGION from '../constants/region';
-import { getUserExternalConfig, setUserExternalConfig } from '../repositories/userExternalConfigs';
-import { findIncompleteByCalendarBlockCalendarId, update } from '../repositories/tasks';
+import REGION from '../../constants/region';
+import {
+  getUserExternalConfig,
+  setUserExternalConfig,
+} from '../../repositories/userExternalConfigs';
+import { findIncompleteByCalendarBlockCalendarId, update } from '../../repositories/tasks';
 
 export default functions
   .region(REGION)

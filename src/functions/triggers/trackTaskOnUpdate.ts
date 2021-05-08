@@ -2,10 +2,10 @@ import * as functions from 'firebase-functions';
 import Mixpanel from 'mixpanel';
 import isEqual from 'lodash/isEqual';
 
-import REGION from '../constants/region';
-import { Task } from '../types/task';
+import REGION from '../../constants/region';
+import { Task } from '../../types/task';
 
-import { TASKS_COLLECTION } from '../repositories/tasks';
+import { TASKS_COLLECTION } from '../../repositories/tasks';
 
 export default functions
   .region(REGION)

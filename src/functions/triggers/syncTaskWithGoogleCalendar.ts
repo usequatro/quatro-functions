@@ -6,11 +6,11 @@ import formatISO from 'date-fns/formatISO';
 import startOfMinute from 'date-fns/startOfMinute';
 import cond from 'lodash/cond';
 
-import REGION from '../constants/region';
-import { update as updateTask } from '../repositories/tasks';
-import { Task } from '../types/task';
-import createGoogleApisAuth from '../utils/createGoogleApisAuth';
-import { CalendarProvider } from '../types/index';
+import REGION from '../../constants/region';
+import { update as updateTask } from '../../repositories/tasks';
+import { Task } from '../../types/task';
+import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
+import { CalendarProvider } from '../../types/index';
 
 const { hostname } = functions.config().app || {};
 

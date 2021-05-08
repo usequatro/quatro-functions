@@ -4,7 +4,7 @@ import set from 'date-fns/set';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
 
-import { DurationUnits, DaysOfWeek, RecurringConfig } from '../types/recurringConfig';
+import { DurationUnits, DaysOfWeek, RecurringConfig } from '../../types/recurringConfig';
 import { appliesToDate, getNewScheduledStart } from './createRecurringTasks';
 
 const testRecurringConfig: RecurringConfig = {

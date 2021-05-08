@@ -27,12 +27,12 @@ import isAfter from 'date-fns/isAfter';
 import setYear from 'date-fns/setYear';
 import set from 'date-fns/set';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
-import { findAll, updateRecurringConfig } from '../repositories/recurringConfigs';
-import { findById, create } from '../repositories/tasks';
-import { getUserExternalConfig } from '../repositories/userExternalConfigs';
-import { Task } from '../types/task';
-import { RecurringConfig, DurationUnits, DaysOfWeek } from '../types/recurringConfig';
-import { TaskSources } from '../types';
+import { findAll, updateRecurringConfig } from '../../repositories/recurringConfigs';
+import { findById, create } from '../../repositories/tasks';
+import { getUserExternalConfig } from '../../repositories/userExternalConfigs';
+import { Task } from '../../types/task';
+import { RecurringConfig, DurationUnits, DaysOfWeek } from '../../types/recurringConfig';
+import { TaskSources } from '../../types';
 
 const TIME_FORMAT = 'HH:mm';
 
