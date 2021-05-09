@@ -40,6 +40,63 @@ export const findTasksByUserId = async (userId: string): Promise<[string, Task][
   return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
 };
 
+export const findTopTasksForUserForDate = async (
+  userId: string,
+  date: number,
+): Promise<[string, Task][]> => {
+  console.log('findTopTasksForUserForDate');
+  const clearTasks: [string, Task][] = (
+    await admin
+      .firestore()
+      .collection(TASKS_COLLECTION)
+      .where('userId', '==', userId)
+      .where('completed', '==', null)
+      .get()
+  ).docs.map((doc) => [doc.id, doc.data() as Task]);
+
+  // Filter out tasks that will still be scheduled or snoozed
+  const allTasksActiveAtDate = clearTasks.filter(
+    ([, task]) =>
+      (task.scheduledStart == null || task.scheduledStart <= date) &&
+      (task.snoozedUntil == null || task.snoozedUntil <= date),
+  );
+
+  // @todo: replace for proper score calculation
+  const tasksWithScores: [string, Task, number][] = allTasksActiveAtDate.map(([id, task]) => [
+    id,
+    task,
+    Math.random(),
+  ]);
+
+  tasksWithScores.sort(([, , scoreA], [, , scoreB]) => {
+    if (scoreA > scoreB) {
+      return -1;
+    }
+    if (scoreB > scoreA) {
+      return 1;
+    }
+    return 0;
+  });
+
+  return tasksWithScores.slice(0, 4).map(([id, task]) => [id, task]);
+};
+
+export const findCompletedTasksByUserIdInRange = async (
+  userId: string,
+  completedStart: number,
+  completedEnd: number,
+): Promise<[string, Task][]> => {
+  const snapshot = await admin
+    .firestore()
+    .collection(TASKS_COLLECTION)
+    .where('userId', '==', userId)
+    .where('completed', '>=', completedStart)
+    .where('completed', '<', completedEnd)
+    .limit(250) // arbitrary high limit for safety
+    .get();
+  return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
+};
+
 export const findLastByRecurringConfigId = async (
   recurringConfigId: string,
 ): Promise<[string, Task] | [null, null]> => {

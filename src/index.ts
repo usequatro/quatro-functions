@@ -7,6 +7,7 @@ import admin from 'firebase-admin';
 
 // import slack from './slack/app';
 import notifyGoogleCalendarChange from './functions/https/notifyGoogleCalendarChange';
+import sendDailyDigest from './functions/https/sendDailyDigest';
 import processProviderUnlink from './functions/callable/processProviderUnlink';
 import storeAuthCode from './functions/callable/storeAuthCode';
 import createRecurringTasks from './functions/scheduled/createRecurringTasks';
@@ -30,6 +31,7 @@ admin.initializeApp(functions.config().firebase);
 export {
   // https
   notifyGoogleCalendarChange,
+  sendDailyDigest,
   // slack,
   // callable
   processProviderUnlink,
