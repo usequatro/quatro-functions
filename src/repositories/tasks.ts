@@ -5,6 +5,7 @@
 import admin from 'firebase-admin';
 import { taskSchema } from '../schemas/task';
 import { Task } from '../types/task';
+import calculateTaskScore from '../utils/calculateTaskScore';
 
 export const TASKS_COLLECTION = 'tasks';
 
@@ -65,7 +66,7 @@ export const findTopTasksForUserForDate = async (
   const tasksWithScores: [string, Task, number][] = allTasksActiveAtDate.map(([id, task]) => [
     id,
     task,
-    Math.random(),
+    calculateTaskScore(task, date),
   ]);
 
   tasksWithScores.sort(([, , scoreA], [, , scoreB]) => {
