@@ -45,7 +45,6 @@ export const findTopTasksForUserForDate = async (
   userId: string,
   date: number,
 ): Promise<[string, Task][]> => {
-  console.log('findTopTasksForUserForDate');
   const clearTasks: [string, Task][] = (
     await admin
       .firestore()
@@ -58,6 +57,7 @@ export const findTopTasksForUserForDate = async (
   // Filter out tasks that will still be scheduled or snoozed
   const allTasksActiveAtDate = clearTasks.filter(
     ([, task]) =>
+      (!task.blockedBy || task.blockedBy.length === 0) &&
       (task.scheduledStart == null || task.scheduledStart <= date) &&
       (task.snoozedUntil == null || task.snoozedUntil <= date),
   );
