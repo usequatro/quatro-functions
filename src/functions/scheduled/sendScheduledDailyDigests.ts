@@ -15,7 +15,7 @@ const DAILY_DIGEST_HOUR = 20; // 8pm
  * @link https://firebase.google.com/docs/functions/schedule-functions
  */
 export default functions.pubsub
-  .schedule('* * * * *') // https://crontab.guru/every-hour
+  .schedule('0 * * * *') // https://crontab.guru/every-hour
   .onRun(async () => {
     const getMixpanel = (() => {
       let mixpanel: Mixpanel.Mixpanel;
