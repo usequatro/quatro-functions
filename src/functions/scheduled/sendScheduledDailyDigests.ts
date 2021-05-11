@@ -4,6 +4,7 @@ import startOfDay from 'date-fns/startOfDay';
 import isBefore from 'date-fns/isBefore';
 import format from 'date-fns/format';
 import mailgun from 'mailgun-js';
+import Mixpanel from 'mixpanel';
 
 import { findUserExternalConfigWithEmailDailyDigestEnabled } from '../../repositories/userExternalConfigs';
 import composeDailyDigest from '../../utils/composeDailyDigest';
@@ -16,6 +17,16 @@ const DAILY_DIGEST_HOUR = 20; // 8pm
 export default functions.pubsub
   .schedule('* * * * *') // https://crontab.guru/every-hour
   .onRun(async () => {
+    const getMixpanel = (() => {
+      let mixpanel: Mixpanel.Mixpanel;
+      return () => {
+        if (!mixpanel) {
+          mixpanel = Mixpanel.init(functions.config().mixpanel.token);
+        }
+        return mixpanel;
+      };
+    })();
+
     const nowUtc = Date.now();
     const configs = await findUserExternalConfigWithEmailDailyDigestEnabled();
 
@@ -98,6 +109,11 @@ export default functions.pubsub
               formattedLastActivityDate,
             });
             sentCount++;
+            getMixpanel().track('Daily digest email sent', {
+              distinct_id: userId,
+              mailgunResponseMessage: body.message,
+              timeZone,
+            });
             resolve(undefined);
           });
         });
