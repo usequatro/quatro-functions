@@ -56,7 +56,7 @@ export default functions.pubsub
 
         const emailDescriptor = await composeDailyDigest(userId, nowUtc, domain, hostname);
         if (!emailDescriptor) {
-          functions.logger.debug(`Not sending email to user ${userId} for timestamp ${nowUtc}`);
+          functions.logger.debug(`Skipping sending email to user ${userId} for timestamp ${nowUtc}`);
           skippedCount++;
           continue;
         }
