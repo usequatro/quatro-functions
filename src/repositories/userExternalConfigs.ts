@@ -43,13 +43,15 @@ export const updateUserExternalConfig = async (
 export const deleteUserExternalConfig = async (userId: string): Promise<WriteResult> =>
   admin.firestore().collection(COLLECTION).doc(userId).delete();
 
-export const findUserExternalConfigWithEmailDailyDigestEnabled = async (): Promise<
-  [string, UserExternalConfig][]
-> => {
+export const findUserExternalConfigsForDailyDigestEmails = async (
+  timestamp: number,
+): Promise<[string, UserExternalConfig][]> => {
+  const dayAgo = timestamp - 1000 * 60 * 60 * 24;
   const snapshot = await admin
     .firestore()
     .collection(COLLECTION)
     .where('emailDailyDigestEnabled', '==', true)
+    .where('lastActivityDate', '>=', dayAgo)
     .get();
   return snapshot.docs.map((doc) => [doc.id, doc.data() as UserExternalConfig]);
 };

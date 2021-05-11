@@ -6,7 +6,7 @@ import format from 'date-fns/format';
 import mailgun from 'mailgun-js';
 import Mixpanel from 'mixpanel';
 
-import { findUserExternalConfigWithEmailDailyDigestEnabled } from '../../repositories/userExternalConfigs';
+import { findUserExternalConfigsForDailyDigestEmails } from '../../repositories/userExternalConfigs';
 import composeDailyDigest from '../../utils/composeDailyDigest';
 
 const DAILY_DIGEST_HOUR = 20; // 8pm
@@ -28,7 +28,7 @@ export default functions.pubsub
     })();
 
     const nowUtc = Date.now();
-    const configs = await findUserExternalConfigWithEmailDailyDigestEnabled();
+    const configs = await findUserExternalConfigsForDailyDigestEmails(nowUtc);
 
     let sentCount = 0;
     let errorCount = 0;
