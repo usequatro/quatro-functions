@@ -39,22 +39,22 @@ export default functions.pubsub
         }
 
         const {
-          mailgun: { key, baseurl },
+          mailgun: { key, domain },
           app: { hostname },
         } = functions.config();
         if (!key) {
-          throw new Error('No Mailgun configured api key');
+          throw new Error('No Mailgun configured API key');
         }
-        if (!baseurl) {
-          throw new Error('No Mailgun configured api base URL');
+        if (!domain) {
+          throw new Error('No Mailgun configured API domain');
         }
 
         const mg = mailgun({
           apiKey: key,
-          domain: baseurl,
+          domain: domain,
         });
 
-        const emailDescriptor = await composeDailyDigest(userId, nowUtc, baseurl, hostname);
+        const emailDescriptor = await composeDailyDigest(userId, nowUtc, domain, hostname);
         if (!emailDescriptor) {
           functions.logger.debug(`Not sending email to user ${userId} for timestamp ${nowUtc}`);
           skippedCount++;

@@ -4,6 +4,9 @@ import mailgun from 'mailgun-js';
 import REGION from '../../constants/region';
 import composeDailyDigest from '../../utils/composeDailyDigest';
 
+/**
+ * @todo: remove this function. It's just for testing Mailgun
+ */
 export default functions.region(REGION).https.onRequest(async (request, response) => {
   try {
     const userId: string = request.body.userId;
@@ -15,17 +18,17 @@ export default functions.region(REGION).https.onRequest(async (request, response
     functions.logger.info(`User ${userId} for timestamp ${timestamp}`);
 
     const {
-      mailgun: { key, baseurl },
+      mailgun: { key, domain },
       app: { hostname },
     } = functions.config();
     if (!key) {
-      throw new Error('No Mailgun configured api key');
+      throw new Error('No Mailgun configured API key');
     }
-    if (!baseurl) {
-      throw new Error('No Mailgun configured api base URL');
+    if (!domain) {
+      throw new Error('No Mailgun configured API domain');
     }
 
-    const emailDescriptor = await composeDailyDigest(userId, timestamp, baseurl, hostname);
+    const emailDescriptor = await composeDailyDigest(userId, timestamp, domain, hostname);
     if (!emailDescriptor) {
       functions.logger.info(`Not sending email to user ${userId} for timestamp ${timestamp}`);
       response.send({ sent: false });
@@ -34,7 +37,7 @@ export default functions.region(REGION).https.onRequest(async (request, response
 
     const mg = mailgun({
       apiKey: key,
-      domain: baseurl,
+      domain: domain,
     });
 
     mg.messages().send(emailDescriptor, function (error, body) {
