@@ -1,7 +1,8 @@
 import admin from 'firebase-admin';
-import { utcToZonedTime } from 'date-fns-tz';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import startOfDay from 'date-fns/startOfDay';
 import endOfDay from 'date-fns/endOfDay';
+import addHours from 'date-fns/addHours';
 import format from 'date-fns/format';
 import { getUserExternalConfig } from '../repositories/userExternalConfigs';
 import {
@@ -40,15 +41,18 @@ export default async function composeDailyDigest(
   }
 
   const dateInLocalTimeZone = utcToZonedTime(date, timeZone);
+
   const beginingOfLocalDay = startOfDay(dateInLocalTimeZone).getTime();
   const endOfLocalDay = endOfDay(dateInLocalTimeZone).getTime();
-
   const completedTasks = await findCompletedTasksByUserIdInRange(
     userId,
     beginingOfLocalDay,
     endOfLocalDay,
   );
-  const topTasks = await findTopTasksForUserForDate(userId, date);
+
+  const tomorrowMorning = addHours(endOfDay(dateInLocalTimeZone), 9);
+  const tomorrowMorningUtc = zonedTimeToUtc(tomorrowMorning, timeZone).getTime();
+  const topTasks = await findTopTasksForUserForDate(userId, tomorrowMorningUtc);
 
   if (!completedTasks.length && !topTasks.length) {
     return null;
