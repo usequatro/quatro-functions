@@ -6,6 +6,13 @@ const normalizeBase = (value: number, from: number, to: number) => (value * to) 
 const convertMillisecondsToDays = (time: number) => time / (1000 * 60 * 60 * 24);
 const getDaysDue = (due: number) => convertMillisecondsToDays(Math.max(due - Date.now(), 0));
 
+/**
+ * 🔥 Heads up: this function is duplicated on the web client codebase
+ *
+ * @param task
+ * @param currentTimestamp
+ * @returns score
+ */
 export default function calculateTaskScore(task: Task, currentTimestamp: number): number {
   const { impact, effort, due, calendarBlockStart } = task;
 
