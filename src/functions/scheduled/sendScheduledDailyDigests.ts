@@ -27,6 +27,21 @@ export default functions.pubsub
       };
     })();
 
+    const {
+      mailgun: { key, domain },
+      app: { hostname },
+    } = functions.config();
+    if (!key) {
+      throw new Error('No Mailgun configured API key');
+    }
+    if (!domain) {
+      throw new Error('No Mailgun configured API domain');
+    }
+    const mg = mailgun({
+      apiKey: key,
+      domain: domain,
+    });
+
     const nowUtc = Date.now();
     const configs = await findUserExternalConfigsForDailyDigestEmails(nowUtc);
 
@@ -71,22 +86,6 @@ export default functions.pubsub
           skippedCount++;
           continue;
         }
-
-        const {
-          mailgun: { key, domain },
-          app: { hostname },
-        } = functions.config();
-        if (!key) {
-          throw new Error('No Mailgun configured API key');
-        }
-        if (!domain) {
-          throw new Error('No Mailgun configured API domain');
-        }
-
-        const mg = mailgun({
-          apiKey: key,
-          domain: domain,
-        });
 
         const emailDescriptor = await composeDailyDigest(userId, nowUtc, domain, hostname);
         if (!emailDescriptor) {
