@@ -7,10 +7,12 @@ import admin from 'firebase-admin';
 
 // import slack from './slack/app';
 import notifyGoogleCalendarChange from './functions/https/notifyGoogleCalendarChange';
+import sendDailyDigest from './functions/https/sendDailyDigest';
 import processProviderUnlink from './functions/callable/processProviderUnlink';
 import storeAuthCode from './functions/callable/storeAuthCode';
 import createRecurringTasks from './functions/scheduled/createRecurringTasks';
 import renewGoogleCalendarWatchers from './functions/scheduled/renewGoogleCalendarWatchers';
+import sendScheduledDailyDigests from './functions/scheduled/sendScheduledDailyDigests';
 // import trackNewAcUser from './triggers/trackNewAcUser';
 import trackDeleteAcUser from './functions/triggers/trackDeleteAcUser';
 // import trackCreateCalendar from './triggers/trackCreateCalendar';
@@ -30,6 +32,7 @@ admin.initializeApp(functions.config().firebase);
 export {
   // https
   notifyGoogleCalendarChange,
+  sendDailyDigest,
   // slack,
   // callable
   processProviderUnlink,
@@ -37,6 +40,7 @@ export {
   // scheduled
   createRecurringTasks,
   renewGoogleCalendarWatchers,
+  sendScheduledDailyDigests,
   // triggers
   // trackNewAcUser,
   trackDeleteAcUser,

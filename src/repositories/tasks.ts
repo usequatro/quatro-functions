@@ -5,6 +5,7 @@
 import admin from 'firebase-admin';
 import { taskSchema } from '../schemas/task';
 import { Task } from '../types/task';
+import calculateTaskScore from '../utils/calculateTaskScore';
 
 export const TASKS_COLLECTION = 'tasks';
 
@@ -36,6 +37,63 @@ export const findTasksByUserId = async (userId: string): Promise<[string, Task][
     .firestore()
     .collection(TASKS_COLLECTION)
     .where('userId', '==', userId)
+    .get();
+  return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
+};
+
+export const findTopTasksForUserForDate = async (
+  userId: string,
+  date: number,
+): Promise<[string, Task][]> => {
+  const clearTasks: [string, Task][] = (
+    await admin
+      .firestore()
+      .collection(TASKS_COLLECTION)
+      .where('userId', '==', userId)
+      .where('completed', '==', null)
+      .get()
+  ).docs.map((doc) => [doc.id, doc.data() as Task]);
+
+  // Filter out tasks that will still be scheduled or snoozed
+  const allTasksActiveAtDate = clearTasks.filter(
+    ([, task]) =>
+      (!task.blockedBy || task.blockedBy.length === 0) &&
+      (task.scheduledStart == null || task.scheduledStart <= date) &&
+      (task.snoozedUntil == null || task.snoozedUntil <= date),
+  );
+
+  const tasksWithScores: [string, Task, number][] = allTasksActiveAtDate.map(([id, task]) => [
+    id,
+    task,
+    calculateTaskScore(task, date),
+  ]);
+
+  tasksWithScores.sort(([, , scoreA], [, , scoreB]) => {
+    if (scoreA > scoreB) {
+      return -1;
+    }
+    if (scoreB > scoreA) {
+      return 1;
+    }
+    return 0;
+  });
+
+  return tasksWithScores.slice(0, 4).map(([id, task]) => [id, task]);
+};
+
+export const findCompletedTasksByUserIdInRange = async (
+  userId: string,
+  completedStart: number,
+  completedEnd: number,
+  limit = 50,
+): Promise<[string, Task][]> => {
+  const snapshot = await admin
+    .firestore()
+    .collection(TASKS_COLLECTION)
+    .where('userId', '==', userId)
+    .where('completed', '>=', completedStart)
+    .where('completed', '<', completedEnd)
+    .limit(limit)
     .get();
   return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
 };
