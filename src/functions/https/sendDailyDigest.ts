@@ -5,7 +5,13 @@ import REGION from '../../constants/region';
 import composeDailyDigest from '../../utils/composeDailyDigest';
 
 /**
- * @todo: remove this function. It's just for testing Mailgun
+ * Just for development purposes to test sending the digest email intentionally
+ *
+ * @example
+    curl -i \
+      -d '{"userId":"8H0RnjkYAfQoqqNQdHfrZH8AaOj2"}' \
+      -H "Content-Type: application/json" \
+      -X POST https://us-central1-tasket-project.cloudfunctions.net/sendDailyDigest
  */
 export default functions.region(REGION).https.onRequest(async (request, response) => {
   try {
@@ -13,6 +19,15 @@ export default functions.region(REGION).https.onRequest(async (request, response
     const timestamp: number = request.body.timestamp || Date.now();
     if (!userId) {
       throw new Error('No userId');
+    }
+
+    // Some hardcoded protections to ensure this route is only used for development
+    const allowedUserIds = [
+      '8H0RnjkYAfQoqqNQdHfrZH8AaOj2', // guillermo splash prod
+      'ELzg9e9LsyRv796hNJGLg9paB5j2', // guillermo personal dev
+    ];
+    if (!allowedUserIds.includes(userId)) {
+      throw new Error(`Invalid user ID ${userId}`);
     }
 
     functions.logger.info(`User ${userId} for timestamp ${timestamp}`);
