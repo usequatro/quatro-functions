@@ -62,7 +62,6 @@ export const findTopTasksForUserForDate = async (
       (task.snoozedUntil == null || task.snoozedUntil <= date),
   );
 
-  // @todo: replace for proper score calculation
   const tasksWithScores: [string, Task, number][] = allTasksActiveAtDate.map(([id, task]) => [
     id,
     task,
@@ -86,6 +85,7 @@ export const findCompletedTasksByUserIdInRange = async (
   userId: string,
   completedStart: number,
   completedEnd: number,
+  limit = 50,
 ): Promise<[string, Task][]> => {
   const snapshot = await admin
     .firestore()
@@ -93,7 +93,7 @@ export const findCompletedTasksByUserIdInRange = async (
     .where('userId', '==', userId)
     .where('completed', '>=', completedStart)
     .where('completed', '<', completedEnd)
-    .limit(250) // arbitrary high limit for safety
+    .limit(limit)
     .get();
   return snapshot.docs.map((doc) => [doc.id, doc.data() as Task]);
 };
