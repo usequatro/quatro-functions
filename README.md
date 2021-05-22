@@ -7,11 +7,6 @@ All code is inside [`src`](src). See [`index.ts`](src/index.ts) for currently av
 - Run local emulator: `npm run serve`
 - Firebase Functions are regular functions exported from `src/index.ts`
 
-## Description
-
-- Recurring task auto-creation.
-- Prototype of Slack bot prototype. See [`functions/src/slack`](functions/src/slack)
-
 ## Firebase Environments
 
 There are 2 Firebase environments.
