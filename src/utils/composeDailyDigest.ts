@@ -2,7 +2,7 @@ import admin from 'firebase-admin';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import startOfDay from 'date-fns/startOfDay';
 import endOfDay from 'date-fns/endOfDay';
-import addHours from 'date-fns/addHours';
+import add from 'date-fns/add';
 import format from 'date-fns/format';
 import { getUserExternalConfig } from '../repositories/userExternalConfigs';
 import {
@@ -52,11 +52,12 @@ export default async function composeDailyDigest(
     endOfLocalDay,
   );
 
-  const tomorrowMorning = addHours(endOfDay(dateInLocalTimeZone), 9);
-  const tomorrowMorningUtc = zonedTimeToUtc(tomorrowMorning, timeZone).getTime();
-  const topTasks = await findTopTasksForUserForDate(userId, tomorrowMorningUtc);
+  const tomorrowEndOfWorkDay = add(startOfDay(dateInLocalTimeZone), { days: 1, hours: 20 });
+  const tomorrowEndOfWorkDayUtc = zonedTimeToUtc(tomorrowEndOfWorkDay, timeZone).getTime();
+  const topTasks = await findTopTasksForUserForDate(userId, tomorrowEndOfWorkDayUtc);
 
   if (!completedTasks.length && !topTasks.length) {
+    // If no tasks, we don't compose an email
     return null;
   }
   const userRecord = await admin.auth().getUser(userId);
@@ -67,7 +68,7 @@ export default async function composeDailyDigest(
   return {
     to: userRecord.email,
     from: `Quatro <no-reply@${senderDomain}>`,
-    subject: `[Quatro] Your daily digest of ${format(date, 'PP')}`,
+    subject: `[Quatro] Your daily digest of ${format(utcToZonedTime(date, timeZone), 'PP')}`,
     template: DAILY_DIGEST_TEMPLATE,
     'h:Reply-To': REPLY_TO_ADDRESS,
     // the keys below are used as Handlebars variables in the Mailgun email template
@@ -75,18 +76,20 @@ export default async function composeDailyDigest(
       appUrl: `https://${appHostname}`,
       unsubscribeUrl: `https://${appHostname}/account`,
       userDisplayName: userRecord.displayName,
-      formattedDate: format(date, 'PP'),
+      formattedDate: format(utcToZonedTime(date, timeZone), 'PP'),
       completedTasks: completedTasks.map(([id, task]) => ({
         id,
         title: task.title,
-        formattedCompletedDate: task.completed ? format(task.completed, 'PP, p') : null,
+        formattedCompletedDate: task.completed
+          ? format(utcToZonedTime(task.completed, timeZone), 'PP, p')
+          : null,
       })),
       topFourTasks: topTasks.map(([id, task]) => ({
         editTaskUrl: `https://${appHostname}/task/${id}`,
         title: task.title,
-        formattedDueDate: task.due ? format(task.due, 'PP, p') : '',
+        formattedDueDate: task.due ? format(utcToZonedTime(task.due, timeZone), 'PP, p') : '',
         formattedScheduledStartDate: task.scheduledStart
-          ? format(task.scheduledStart, 'PP, p')
+          ? format(utcToZonedTime(task.scheduledStart, timeZone), 'PP, p')
           : '',
       })),
     }),
