@@ -1,7 +1,3 @@
-export type User = {
-  uid: string;
-};
-
 export enum CalendarProvider {
   Google = 'google',
 }
