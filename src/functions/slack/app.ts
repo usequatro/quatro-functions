@@ -4,14 +4,15 @@
 
 import * as functions from 'firebase-functions';
 import express, { Request, Response } from 'express';
-import cors from 'cors';
+// import cors from 'cors';
 
 import { signin, signout } from './signin';
 import handleCreateTask from './handleCreateTask';
 
 const app = express();
 
-app.use(cors({ origin: true }));
+// Note, this is necesssary for it to actually work!
+// app.use(cors({ origin: true }));
 app.use(express.json());
 
 /**
@@ -36,4 +37,4 @@ app.post('/', async (req: Request, res: Response) => {
   }
 });
 
-export default functions.https.onRequest(app)
+export default functions.https.onRequest(app);

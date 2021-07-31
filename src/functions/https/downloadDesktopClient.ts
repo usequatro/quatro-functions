@@ -1,11 +1,8 @@
 import * as functions from 'firebase-functions';
-import cors from 'cors';
 import Mixpanel from 'mixpanel';
 
 import REGION from '../../constants/region';
 import getUserIdFromToken from '../../utils/getUserIdFromToken';
-
-cors({ origin: true });
 
 /**
  * Unique link for all environments
