@@ -8,6 +8,7 @@ import admin from 'firebase-admin';
 // import slack from './slack/app';
 import notifyGoogleCalendarChange from './functions/https/notifyGoogleCalendarChange';
 import sendDailyDigest from './functions/https/sendDailyDigest';
+import downloadDesktopClient from './functions/https/downloadDesktopClient';
 import processProviderUnlink from './functions/callable/processProviderUnlink';
 import storeAuthCode from './functions/callable/storeAuthCode';
 import createRecurringTasks from './functions/scheduled/createRecurringTasks';
@@ -33,6 +34,7 @@ export {
   // https
   notifyGoogleCalendarChange,
   sendDailyDigest,
+  downloadDesktopClient,
   // slack,
   // callable
   processProviderUnlink,
