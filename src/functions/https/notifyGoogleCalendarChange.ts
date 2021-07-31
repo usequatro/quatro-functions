@@ -1,5 +1,4 @@
 import * as functions from 'firebase-functions';
-import cors from 'cors';
 import { google } from 'googleapis';
 import sub from 'date-fns/sub';
 import formatISO from 'date-fns/formatISO';
@@ -10,9 +9,6 @@ import createGoogleApisAuth from '../../utils/createGoogleApisAuth';
 import parseGoogleCalendarDate from '../../utils/parseGoogleCalendarDate';
 import { findById, update } from '../../repositories/tasks';
 import { CalendarProvider } from '../../types/index';
-
-// Enable cors requests
-cors({ origin: true });
 
 /**
  * @link https://developers.google.com/calendar/v3/push

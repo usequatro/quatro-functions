@@ -1,6 +1,5 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
-import cors from 'cors';
 
 // import { SIGNED_GOOGLE_TAG } from '../constants/activeCampaign';
 import REGION from '../../constants/region';
@@ -12,8 +11,6 @@ import {
 // import { getContactTagsForContact, deleteTagFromContact } from '../utils/activeCampaignApi';
 import { updateUserExternalConfig } from '../../repositories/userExternalConfigs';
 import { CalendarProvider } from '../../types/index';
-
-cors({ origin: true });
 
 const deleteCalendars = async (calendarIds: string[]) => {
   for (const id of calendarIds) {
