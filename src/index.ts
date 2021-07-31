@@ -5,7 +5,6 @@
 import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 
-// import slack from './slack/app';
 import notifyGoogleCalendarChange from './functions/https/notifyGoogleCalendarChange';
 import sendDailyDigest from './functions/https/sendDailyDigest';
 import downloadDesktopClient from './functions/https/downloadDesktopClient';
@@ -35,7 +34,6 @@ export {
   notifyGoogleCalendarChange,
   sendDailyDigest,
   downloadDesktopClient,
-  // slack,
   // callable
   processProviderUnlink,
   storeAuthCode,
