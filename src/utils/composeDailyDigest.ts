@@ -1,3 +1,4 @@
+import * as functions from 'firebase-functions';
 import admin from 'firebase-admin';
 import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import startOfDay from 'date-fns/startOfDay';
@@ -42,6 +43,15 @@ export default async function composeDailyDigest(
     throw new Error('No userExternalConfig.timeZone');
   }
 
+  const { email, displayName: userDisplayName, emailVerified } = await admin.auth().getUser(userId);
+  if (!email) {
+    throw new Error('User has no email');
+  }
+  if (!emailVerified) {
+    functions.logger.debug(`Skipping because email address isn't verified ${userId} (${email})`);
+    return null;
+  }
+
   const dateInLocalTimeZone = utcToZonedTime(date, timeZone);
 
   const beginingOfLocalDay = startOfDay(dateInLocalTimeZone).getTime();
@@ -57,16 +67,14 @@ export default async function composeDailyDigest(
   const topTasks = await findTopTasksForUserForDate(userId, tomorrowEndOfWorkDayUtc);
 
   if (!completedTasks.length && !topTasks.length) {
-    // If no tasks, we don't compose an email
+    functions.logger.debug(
+      `Skipping because no tasks to report for user ${userId} for timestamp ${date}`,
+    );
     return null;
-  }
-  const userRecord = await admin.auth().getUser(userId);
-  if (!userRecord.email) {
-    throw new Error('User has no email');
   }
 
   return {
-    to: userRecord.email,
+    to: email,
     from: `Quatro <no-reply@${senderDomain}>`,
     subject: `[Quatro] Your daily digest of ${format(utcToZonedTime(date, timeZone), 'PP')}`,
     template: DAILY_DIGEST_TEMPLATE,
@@ -75,7 +83,7 @@ export default async function composeDailyDigest(
     'h:X-Mailgun-Variables': JSON.stringify({
       appUrl: `https://${appHostname}`,
       unsubscribeUrl: `https://${appHostname}/account`,
-      userDisplayName: userRecord.displayName,
+      userDisplayName,
       formattedDate: format(utcToZonedTime(date, timeZone), 'PP'),
       completedTasks: completedTasks.map(([id, task]) => ({
         id,

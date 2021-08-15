@@ -24,7 +24,8 @@ export default functions.region(REGION).https.onRequest(async (request, response
     // Some hardcoded protections to ensure this route is only used for development
     const allowedUserIds = [
       '8H0RnjkYAfQoqqNQdHfrZH8AaOj2', // guillermo splash prod
-      'ELzg9e9LsyRv796hNJGLg9paB5j2', // guillermo personal dev
+      'f5VYmFZMsIYjjzJulNrIICntuZm1', // g.puente.allott@gmail.com dev
+      '2ZVQ9sSQx6YT1EF7wF3RBoYwdEj2', // g.puente.allott+connected@gmail.com dev
     ];
     if (!allowedUserIds.includes(userId)) {
       throw new Error(`Invalid user ID ${userId}`);
