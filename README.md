@@ -15,6 +15,8 @@ All code is inside [`src`](src). See [`index.ts`](src/index.ts) for currently av
 In 2022, Quatro's team decided to stop the project. Check out this blog post to learn more: [What a B2B PM Learned About Building Consumer Products.](https://jonsaft.com/2022/02/04/what-a-b2b-pm-learned-about-building-consumer-products/)
 
 
+If you have a technical question or want to contribute, feel free to [open an issue.](https://github.com/usequatro/quatro-web-client/issues/new)
+
 ## Local development
 
 - Run local emulator: `npm run serve`
